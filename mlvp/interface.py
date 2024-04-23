@@ -89,7 +89,20 @@ class Interface:
     def collect(self):
         """Collect all signals values"""
 
-        return {signal: getattr(self, signal).xdata.value for signal in self.signals_list}
+        signals = {signal: getattr(self, signal).value for signal in self.signals_list}
+        sub_interfaces = {sub_interface_name: getattr(self, sub_interface_name).collect() for sub_interface_name, _ in self.sub_interfaces}
+        return {**signals, **sub_interfaces}
+
+    def assign(self, signals):
+        """Assign all signals values"""
+
+        for signal in self.signals_list:
+            if signal in signals:
+                getattr(self, signal).value = signals[signal]
+        for sub_interface_name, _ in self.sub_interfaces:
+            if sub_interface_name in signals:
+                getattr(self, sub_interface_name).assign(signals[sub_interface_name])
+
 
     @classmethod
     def from_prefix(cls, dut, prefix = "",

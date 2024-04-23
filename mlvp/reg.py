@@ -1,5 +1,9 @@
 all_regs = []
 
+class Wire:
+    def __init__(self, value=0):
+        self.value = value
+
 class RegInit:
     def __init__(self, value=0):
         self.cur_value = value
