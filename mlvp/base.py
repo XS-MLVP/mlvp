@@ -1,0 +1,3 @@
+
+class MObject(object):
+    pass

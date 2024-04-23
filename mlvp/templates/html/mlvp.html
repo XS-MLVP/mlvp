@@ -1,0 +1,42 @@
+{% extends "html/index.html" %}
+        {% block session_metadata %}
+        <tr>
+          <th>Started</th>
+          <td>{{ started|strftime(time_format) }}</td>
+        </tr>
+        <tr>
+          <th>Ended</th>
+          <td>
+            {% if ended %}
+              {{ ended|strftime(time_format) }}
+            {% else %}
+              <i>In progress...</i>
+            {% endif %}
+          </td>
+        </tr>
+        {% if ended %}
+          <tr>
+            <th>Duration</th>
+            {% set duration = ended - started %}
+            <td>{{ duration|timedelta }}</td>
+          </tr>
+        {% endif %}
+        <tr>
+          <th>Total run time</th>
+          <td>{{ tests|map(attribute='phases')|map('sum', 'report.duration')|sum|timedelta }}</td>
+        </tr>
+        {% for key, value in metadata.items() %}
+          <tr>
+            <th>{{ key }}</th>
+            <td>
+              {% if value is mapping %}
+                {% for key, value in value.items() %}
+                  {{ key }}: {{ value }}<br>
+                {% endfor %}
+              {% else %}
+                {{ value|urlize }}
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        {% endblock %}
