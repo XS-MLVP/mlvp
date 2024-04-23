@@ -1,4 +1,4 @@
-from .asynchronous import create_task, run
+from .asynchronous import start_clock, create_task, run
 from .asynchronous import delay_func, delay_assign
 from .asynchronous import Event, Queue, sleep
 
