@@ -113,24 +113,24 @@ class CovGroup(object):
     functional coverage group
     """
 
-    def __init__(self, name: str = "", disable_sample_when_hinted=True) -> None:
+    def __init__(self, name: str = "", disable_sample_when_point_hinted=True) -> None:
         """
         CovGroup constructor
         @param name: name of the group
-        @param disable_sample_when_hinted: if True, the group will stop sampling when all points are hinted
+        @param disable_sample_when_point_hinted: if True, the group will stop sampling when all points are hinted
         """
         frame = inspect.stack()[1]
         self.filename = frame.filename
         self.lineno = frame.lineno
         self.name = name if name else "%s:%s" % (self.filename, self.lineno)
         self.cov_points = OrderedDict()
-        self.disable_sample_when_hinted = disable_sample_when_hinted
+        self.disable_sample_when_point_hinted = disable_sample_when_point_hinted
         self.hinted = False
         self.stop_sample = False
         self.sample_count = 0
         self.sample_calln = 0
     
-    def add_watch_point(self, target: object, bins: Union[dict, CovCondition, Callable[[object, object], bool]], check_func: dict = {}, name: str = ""):
+    def add_watch_point(self, target: object, bins: Union[dict, CovCondition, Callable[[object, object], bool]], check_func: dict = {}, name: str = "", once=None):
         """
         Add a watch point to the group
         @param target: the object to be watched, need to have a value attribute. eg target.value is available
@@ -153,7 +153,12 @@ class CovGroup(object):
         for k, v in bins.items():
             if not callable(v):
                 raise ValueError("Invalid value %s for key %s" % (v, k))        
-        self.cov_points[key] = {"taget": target, "bins": bins, "check_func": check_func, "hints": {k: 0 for k in bins.keys()}, "hinted": False}
+        self.cov_points[key] = {"taget": target, 
+                                "bins": bins, 
+                                "check_func": check_func, 
+                                "hints": {k: 0 for k in bins.keys()}, 
+                                "hinted": False, 
+                                "once": self.disable_sample_when_point_hinted if once == None else once}
 
     @staticmethod    
     def __check__(points) -> bool:
@@ -215,7 +220,7 @@ class CovGroup(object):
         self.sample_calln += 1
         if self.stop_sample:
             return
-        if self.hinted and self.disable_sample_when_hinted:
+        if self.hinted and self.disable_sample_when_point_hinted:
             return
         self.sample_count += 1
         all_hinted = True
@@ -230,7 +235,7 @@ class CovGroup(object):
         """
         if self.stop_sample:
             return True
-        return self.hinted and self.disable_sample_when_hinted
+        return self.hinted and self.disable_sample_when_point_hinted
     
     def stop_sample(self):
         """
@@ -249,13 +254,42 @@ class CovGroup(object):
         return the group as a dict
         """
         ret = OrderedDict()
-        for k, v in self.cov_points.items():
-            ret[k] = {"hinted": v["hinted"], "hints": v["hints"]}
-        ret["__name__"] = self.name
-        ret["__hinted__"] = self.hinted
+        bins_hints = 0
+        bins_total = 0
+        points_hints = 0
+        points_total = 0
+        has_once = False
+        
+        def collect_bins(v):
+            nonlocal bins_total, bins_hints
+            bins_total += 1
+            if v["hints"] > 0:
+                bins_hints += 1
+            return v
+        
+        def collect_points(v):
+            nonlocal points_total, points_hints, has_once
+            points_total += 1
+            if v["hinted"]:
+                points_hints += 1
+            if v["once"]:
+                has_once = True
+            return v["hinted"]
+        
+        ret["points"] = [{"once": v["once"], "hinted": collect_points(v), "bins": [collect_bins({"name": x, "hints": y}) 
+                                                          for x, y in v["hints"].items()], "name":k} 
+                                                          for k, v in self.cov_points.items()]
+        ret["name"] = self.name
+        ret["hinted"] = self.hinted
+        ret["bin_num_total"] = bins_total
+        ret["bin_num_hints"] = bins_hints
+        ret["point_num_total"] = points_total
+        ret["point_num_hints"] = points_hints
+        ret["has_once"] = has_once
+        # other informations
         ret["__filename__"] = self.filename
         ret["__lineno__"] = self.lineno
-        ret["__disable_sample_when_hinted__"] = self.disable_sample_when_hinted
+        ret["__disable_sample_when_point_hinted__"] = self.disable_sample_when_point_hinted
         ret["__sample_count__"] = self.sample_count
         ret["__sample_calln__"] = self.sample_calln
         return ret

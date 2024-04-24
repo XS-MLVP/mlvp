@@ -1,42 +1,179 @@
 {% extends "html/index.html" %}
-        {% block session_metadata %}
-        <tr>
-          <th>Started</th>
-          <td>{{ started|strftime(time_format) }}</td>
-        </tr>
-        <tr>
-          <th>Ended</th>
-          <td>
-            {% if ended %}
-              {{ ended|strftime(time_format) }}
-            {% else %}
-              <i>In progress...</i>
-            {% endif %}
-          </td>
-        </tr>
-        {% if ended %}
-          <tr>
-            <th>Duration</th>
-            {% set duration = ended - started %}
-            <td>{{ duration|timedelta }}</td>
-          </tr>
-        {% endif %}
-        <tr>
-          <th>Total run time</th>
-          <td>{{ tests|map(attribute='phases')|map('sum', 'report.duration')|sum|timedelta }}</td>
-        </tr>
-        {% for key, value in metadata.items() %}
-          <tr>
-            <th>{{ key }}</th>
-            <td>
-              {% if value is mapping %}
-                {% for key, value in value.items() %}
-                  {{ key }}: {{ value }}<br>
-                {% endfor %}
-              {% else %}
-                {{ value|urlize }}
+
+{% block script %}
+function openFunctionalDetailModal() {
+  document.getElementById('functional-detail-modal-overlay').style.display = 'block';
+  document.getElementById('functional-detail-modal').style.display = 'block';
+  dragElement(document.getElementById('functional-detail-modal'));
+}
+
+// 关闭模态框
+function closeFunctionalDetailModal() {
+  document.getElementById('functional-detail-modal-overlay').style.display = 'none';
+  document.getElementById('functional-detail-modal').style.display = 'none';
+}
+
+function dragElement(elmnt) {
+  var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+  elmnt.onmousedown = dragMouseDown;
+  function dragMouseDown(e) {
+    e = e || window.event;
+    e.preventDefault();
+    // get the mouse cursor position at startup:
+    pos3 = e.clientX;
+    pos4 = e.clientY;
+    document.onmouseup = closeDragElement;
+    // call a function whenever the cursor moves:
+    document.onmousemove = elementDrag;
+  }
+  function elementDrag(e) {
+    e = e || window.event;
+    e.preventDefault();
+    // calculate the new cursor position:
+    pos1 = pos3 - e.clientX;
+    pos2 = pos4 - e.clientY;
+    pos3 = e.clientX;
+    pos4 = e.clientY;
+    // set the element's new position:
+    elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+    elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+  }
+  function closeDragElement() {
+    // stop moving when mouse button is released:
+    document.onmouseup = null;
+    document.onmousemove = null;
+  }
+}
+
+{% endblock %}
+
+{% block coverage %}
+
+<div id="functional-detail-modal-overlay" class="modal-overlay"></div>
+<div id="functional-detail-modal" class="modal">
+  <div class="container">
+    <h2>Functional Coverage <button onclick="closeFunctionalDetailModal()" style="float: right; top: 5px;">close</button></h2>
+  </div>
+  <hr>
+  <div class="cantainer coverage-list">
+    {% if coverages.functional %}
+    {% set total_g = coverages.functional.group_num_total %}
+    {% set total_p = coverages.functional.point_num_total %}
+    {% set total_b = coverages.functional.bin_num_total %}
+    {% set hints_g = coverages.functional.group_num_hints %}
+    {% set hints_p = coverages.functional.point_num_hints %}
+    {% set hints_b = coverages.functional.bin_num_hints %}
+    {% set rate_g = hints_g / total_g * 100 %}
+    {% set rate_p = hints_p / total_p * 100 %}
+    {% set rate_b = hints_b / total_b * 100 %}
+    {% set fc_grate = coverages.functional.grate %}
+    {% set show_once = coverages.functional.has_once %}
+
+    <div style="text-align: center;">
+      Groups: {{hints_g}}/{{total_g}} (<span style="font-weight: bold; color: {% if rate_g < fc_grate %}red {% else  %} green {% endif %};">{{rate_g}}%</span>) &nbsp;&nbsp;&nbsp;&nbsp;
+      Points: {{hints_p}}/{{total_p}} (<span style="font-weight: bold; color: {% if rate_p < fc_grate %}red {% else  %} green {% endif %};">{{rate_p}}%</span>) &nbsp;&nbsp;&nbsp;&nbsp; 
+      Bins:  {{hints_b}}/{{total_b}}  (<span style="font-weight: bold; color: {% if rate_b < fc_grate %}red {% else  %} green {% endif %};">{{rate_b}}%</span>)
+    </div>
+    <ul>
+      {% for group in coverages.functional.groups %}
+      <li>Group: {{group.name}} {% if group.hinted %}<span style="float: right; color: green;">Passed</span>{% else %}<span style="float: right; color: red;">Failed</span> {% endif %}</li>
+        <ul>
+        {% for point in group.points %}
+          <li>{% if point.once %}
+              <span style="color: brown; font-weight: bold;">*</span>
               {% endif %}
-            </td>
-          </tr>
+            Point: {{point.name}} {% if point.hinted %}<span style="float: right; color: green;">Passed</span>{% else %}<span style="float: right; color: red;">Failed</span> {% endif %}</li>
+          <ul>
+          {% for bin in point.bins %}
+            <li>Bin: {{bin.name}} {% if bin.hinted !=0 %}<span style="float: right; color: green;">{{bin.hints}}</span>{% else %}<span style="float: right; color: red;">{{bin.hints}}</span> {% endif %}</li>
           {% endfor %}
-        {% endblock %}
+          </ul>
+        {% endfor %}
+        </ul>
+      {% endfor %}
+    {% endif %}
+    </ul>
+  </div>
+  {% if show_once %}
+  <div style="text-align: center;"><span style="color: brown; font-weight: bold;">*</span>: It means that once this coverage point is set as hinted, its bins will no longer be counted.</div>
+  {% endif %}
+</div>
+
+<section id="coverage">
+  <hr>
+  <div class="container">
+    <table style="width: 100%;">
+      <td>
+        <h3>Line Coverage</h3>
+        <table class="min-width-td">
+          <tr>
+            <th>Coverage Rate</th>
+            <th>Hint Lines</th>
+            <th>Total Lines</th>
+            <th>Detail</th>
+          </tr>
+          <tr>
+            {% if coverages.line is none %}
+            <td>N/A</td>
+            <td>N/A</td>
+            <td>N/A</td>
+            <td>N/A</td>
+            {% else %}
+            {% set line_rate = 0 %}
+            {% if coverages.line.total != 0 %}
+            {% set line_rate = (coverages.line.hints / coverages.line.total * 100) %}
+            {% endif %}
+            <td>
+            <span style="font-weight: bold; color: {% if line_rate < coverages.line.grate %} red {% else %} green {% endif %};">{{ line_rate|round(2) }}%</span>
+            </td>
+            <td>{{ coverages.line.hints }}</td>
+            <td>{{ coverages.line.total }}</td>
+            <td><a href="a.html" target="_blank">View Details</a></td>
+            {% endif %}
+          </tr>
+        </table>
+      </td>
+      <td>
+        <h3>Functional Coverage</h3>
+        <table class="min-width-td">
+          <tr>
+            <th>Coverage Rate</th>
+            <th>Hint Points</th>
+            <th>Total Points</th>
+            <th>Detail</th>
+          </tr>
+          <tr>
+          <tr>
+            {% if coverages.functional is none %}
+            <td>N/A</td>
+            <td>N/A</td>
+            <td>N/A</td>
+            <td>N/A</td>
+            {% else %}
+            {% set point_rate = 0 %}
+            {% if coverages.functional.point_num_total != 0 %}
+            {% set point_rate = (coverages.functional.point_num_hints / coverages.functional.point_num_total * 100) %}
+            {% endif %}
+            <td>
+            <span style="font-weight: bold; color: {% if point_rate < coverages.functional.grate %} red {% else %} green {% endif %};">{{ point_rate|round(2) }}%</span>
+            </td>
+            <td>{{ coverages.functional.point_num_hints }}</td>
+            <td>{{ coverages.functional.point_num_total }}</td>
+            <td><a href="javascript:openFunctionalDetailModal()">View Details</a></td>
+            {% endif %}
+          </tr>
+          </tr>
+        </table>
+      </td>
+    </table>
+  </div>
+  <hr>
+</section>
+{% endblock %}
+
+
+{% block footer %}
+<div class="container">
+  MLVP Report, Do Not Edit.
+</div>
+{% endblock %}

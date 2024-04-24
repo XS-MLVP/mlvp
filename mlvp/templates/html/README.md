@@ -1,3 +1,3 @@
 # Readme
 
-This template is from: https://github.com/christiansandberg/pytest-reporter-html1
+This template is modified from: https://github.com/christiansandberg/pytest-reporter-html1

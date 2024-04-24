@@ -1,4 +1,7 @@
+import pytest
 import mlvp.funcov as fc
+from mlvp.reporter import set_func_coverage
+
 
 class TextData(object):
     '''Simple class to test funcov with a text value'''
@@ -7,7 +10,7 @@ class TextData(object):
     def __str__(self):
         return self.value
 
-def test_funcov():
+def test_funcov(request): 
     v = TextData(1)
     g = fc.CovGroup("coverage_group_0")
 
@@ -69,6 +72,11 @@ def test_funcov():
     g.sample()
     # print results
     assert g.is_all_covered() == True
+    set_func_coverage(request, g)
+
+
+def test_sample_assert(request):
+    assert 1 == 1
 
 
 if __name__ == "__main__":

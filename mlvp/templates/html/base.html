@@ -9,8 +9,8 @@
   {% filter css %}
     {% filter css_minify %}
       {% block style %}
-      {% include "html1/normalize.css" %}
-      {% include "html1/style.css" %}
+      {% include "html/normalize.css" %}
+      {% include "html/style.css" %}
       {% endblock %}
     {% endfilter %}
   {% endfilter %}
@@ -25,6 +25,9 @@
     {% block header %}
     <div class="container">
       <span class="report-title">{{ title|default('Test Report') }}</span>
+      {% if user is defined %}
+      <span style="float: right"><div style="text-align: left;">Name: {{user.name}} <br> Code: {{user.code}}</div> </span>
+      {% endif %}
     </div>
     {% endblock %}
   </header>

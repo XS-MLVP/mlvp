@@ -1,4 +1,4 @@
-{% extends "html1/base.html" %}
+{% extends "html/base.html" %}
 {% block content %}
 <section id="summary">
   <div class="container">
@@ -96,6 +96,8 @@
     {% endblock %}
   </div>
 </section>
+{% block coverage %}
+{% endblock %}
 {% if warnings %}
   <section id="warnings">
     <div class="container">
@@ -133,7 +135,7 @@
           </h2>
         </summary>
         <div class="content box">
-          {% include "html1/module.html" %}
+          {% include "html/module.html" %}
         </div>
       </details>
     {% endfor %}
