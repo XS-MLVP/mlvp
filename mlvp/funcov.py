@@ -126,6 +126,7 @@ class CovGroup(object):
         self.cov_points = OrderedDict()
         self.disable_sample_when_point_hinted = disable_sample_when_point_hinted
         self.hinted = False
+        self.all_once = False
         self.stop_sample = False
         self.sample_count = 0
         self.sample_calln = 0
@@ -163,6 +164,7 @@ class CovGroup(object):
     @staticmethod    
     def __check__(points) -> bool:
         hinted = True
+        onece = True
         for k, b in points["bins"].items():
             check_func = points["check_func"].get(k)
             hints = points["hints"][k]
@@ -174,9 +176,11 @@ class CovGroup(object):
             if hints == 0:
                 hinted = False
             
+            if not (hinted and points["once"] == True):
+                onece = False
             points["hints"][k] = hints
         points["hinted"] = hinted
-        return hinted
+        return hinted, onece
     
     def cover_points(self):
          """
@@ -220,13 +224,17 @@ class CovGroup(object):
         self.sample_calln += 1
         if self.stop_sample:
             return
-        if self.hinted and self.disable_sample_when_point_hinted:
+        if self.hinted and self.all_once:
             return
         self.sample_count += 1
         all_hinted = True
+        self.all_once = True
         for _, v in self.cov_points.items():
-            if not self.__check__(v):
+            hinted, onece = self.__check__(v)
+            if not hinted:
                 all_hinted = False
+            if not onece:
+                self.all_once = False
         self.hinted = all_hinted
     
     def sample_stoped(self):
@@ -235,7 +243,7 @@ class CovGroup(object):
         """
         if self.stop_sample:
             return True
-        return self.hinted and self.disable_sample_when_point_hinted
+        return self.hinted and self.all_once
     
     def stop_sample(self):
         """
@@ -248,6 +256,7 @@ class CovGroup(object):
         resume sampling
         """
         self.stop_sample = False
+        self.all_once = False
 
     def as_dict(self):
         """
@@ -292,6 +301,7 @@ class CovGroup(object):
         ret["__disable_sample_when_point_hinted__"] = self.disable_sample_when_point_hinted
         ret["__sample_count__"] = self.sample_count
         ret["__sample_calln__"] = self.sample_calln
+        ret["__stop_sample__"] = self.stop_sample
         return ret
 
     def __str__(self) -> str:
@@ -299,4 +309,3 @@ class CovGroup(object):
         return the group as a json string
         """
         return json.dumps(self.as_dict(), indent=4)
-

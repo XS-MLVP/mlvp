@@ -1,7 +1,10 @@
 #coding=utf8
 
+import json
 import pytest
 import os
+import sys
+import uuid
 from .funcov import CovGroup
 
 
@@ -9,32 +12,30 @@ def get_template_dir():
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
 
 
-def generate_pytest_report(report):
-    result = pytest.main(
-        [
+def generate_pytest_report(report, args=["-s"]):
+    defualt_args = [
             "--template=html/mlvp.html",
             "--template-dir=" + get_template_dir(),
             "--report=" + report,
-            "-s"
-        ]
-    )
+    ]
+    if args is not None:
+        defualt_args.extend(args)
+    result = pytest.main(defualt_args)
     return result
 
-__user_info__ = None
-__line_coverage__ = None
-__func_coverage__ = None
 
-
-def __update_line_coverage__():
+def __update_line_coverage__(__line_coverage__=None):
+    if __line_coverage__ is None:
+        return None
     return {
         "hints": 100,
         "total": 1000,
         "grate": 90,
+        "detail": "detail.html",
     }
 
 
-def __update_func_coverage__():
-    global __func_coverage__
+def __update_func_coverage__(__func_coverage__):
     if __func_coverage__ is None:
         return None
     coverage = {}
@@ -47,7 +48,7 @@ def __update_func_coverage__():
     has_once = False
     def parse_group(g):
         nonlocal group_num_hints, group_num_total, point_num_hints, point_num_total, bin_num_hints, bin_num_total, has_once
-        data = g.as_dict()
+        data = json.loads(g)
         group_num_total += 1
         if data["hinted"]:
             group_num_hints += 1
@@ -70,18 +71,52 @@ def __update_func_coverage__():
     return coverage
 
 
+__report_info__ = {
+    "user": None,
+    "title": "XiangShan-BPU UT-Test Report",
+    "meta": {},
+}
+
+
 def process_context(context, config):
-    global __user_info__
-    if __user_info__ is not None:
-        context["user"] = __user_info__
+    def set_ctx(key, value):
+        if value is None:
+            return
+        context[key] = value
+
     for k in ["Plugins", "Packages"]:
         context["metadata"].pop(k, None)
-    context["title"] = "XiangShan-BPU UT-Test Report"
+
+    set_ctx("user", __report_info__["user"])
+    set_ctx("title",  __report_info__["title"])
+    context["metadata"].update(__report_info__["meta"])
+
+    coverage_func_list = []
+    coverage_func_keys = []
+    coverage_line_list = []
+    coverage_line_keys = []
+
+    for t in context["tests"]:
+        for p in t["phases"]:
+            if hasattr(p["report"], "__coverage_group__"):
+                fc_data = p["report"].__coverage_group__
+                key = "%s-%s" % (fc_data["hash"], fc_data["id"])
+                if key in coverage_func_keys:
+                    continue
+                coverage_func_keys.append(key)
+                coverage_func_list.append(fc_data["data"])
+            if hasattr(p["report"], "__line_coverage__"):
+                lc_data = p["report"].__line_coverage__
+                key = "%s-%s" % (lc_data["hash"], lc_data["id"])
+                if key in coverage_line_keys:
+                    continue
+                coverage_line_keys.append(key)
+                coverage_line_list.append(lc_data["data"])
+
     context["coverages"] = {
-        "line": __update_line_coverage__(),
-        "functional": __update_func_coverage__()
+        "line": __update_line_coverage__(coverage_line_list),
+        "functional": __update_func_coverage__(coverage_func_list)
     }
-    print(context["coverages"])
 
 
 def set_func_coverage(request, g):
@@ -89,25 +124,40 @@ def set_func_coverage(request, g):
     request.node.__coverage_group__ = g
 
 
-def process_func_coverage(item, call):
+def set_line_coverage(request, datfile):
+    assert isinstance(datfile, str), "datfile should be a string"
+    request.node.__line_coverage__ = datfile
 
+
+def process_func_coverage(item, call, report):
     if call.when != 'teardown':
         return
-    
-    func_coverage_group = getattr(item, '__coverage_group__', None)
-    if func_coverage_group is None:
-        return None
-
-    assert isinstance(func_coverage_group, CovGroup), "func_coverage_group should be an instance of CovGroup"
-    global __func_coverage__
-    if __func_coverage__ is None:
-        __func_coverage__ = []
-
-    if func_coverage_group in __func_coverage__:
-        return
-    __func_coverage__.append(func_coverage_group)
+    if hasattr(item, "__coverage_group__"):
+        assert isinstance(item.__coverage_group__, CovGroup), "item.__coverage_group__ should be an instance of CovGroup"
+        str_func_coverage = str(item.__coverage_group__)
+        report.__coverage_group__ = {
+            "hash": "%s" % hash(str_func_coverage),
+            "id": "H%s-P%s" % (uuid.getnode(), os.getpid()),
+            "data": str_func_coverage
+        }
+    if hasattr(item, "__line_coverage__"):
+        assert isinstance(item.__line_coverage__, str), "item.__line_coverage__ should be a string"
+        report.__line_coverage__ = {
+            "hash": "%s" % hash(item.__line_coverage__),
+            "id": "H%s-P%s" % (uuid.getnode(), os.getpid()),
+            "data": item.__line_coverage__
+        }
+    return report
 
 
 def set_user_info(name, code):
-    global __user_info__
-    __user_info__ = {"name": name, "code": code}
+    global __report_info__
+    __report_info__["user"] = {"name": name, "code": code}
+
+
+def set_meta_info(key, value, is_del=False):
+    global __report_info__
+    if is_del:
+        del __report_info__["meta"][key]
+    else:
+        __report_info__["meta"][key] = value

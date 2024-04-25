@@ -1,6 +1,8 @@
 import pytest
+import os
 import mlvp.funcov as fc
 from mlvp.reporter import set_func_coverage
+import sys
 
 
 class TextData(object):
@@ -73,10 +75,12 @@ def test_funcov(request):
     # print results
     assert g.is_all_covered() == True
     set_func_coverage(request, g)
+    print("test_funcov pass pid: ", os.getpid(), file=sys.stderr)
 
 
 def test_sample_assert(request):
     assert 1 == 1
+    print("test_sample_assert pass pid: ", os.getpid(), file=sys.stderr)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 
 import os
+import sys
 from mlvp.reporter import generate_pytest_report
 
 import mlvp.funcov as fc
@@ -21,12 +22,17 @@ def test_funcov_error(request):
                           "bin_name_range3-5": fc.In([3,4,5])
                           }, name="watch_point_1")
     set_func_coverage(request, g)
+    print("test_funcov_error pid: ", os.getpid(), file=sys.stderr)
+
+
+def test_must_fail():
+    assert False
 
 
 def sample_report():
     report = os.path.join(os.path.dirname(os.path.abspath(__file__)), "report.html")
     result = generate_pytest_report(report)
-    print(result)
+    print("sample_report pid: ", os.getpid())
 
 
 if __name__ == "__main__":

@@ -1,3 +1,4 @@
+#coding=utf8
 
 import pytest
 from mlvp.reporter import process_context, process_func_coverage
@@ -8,6 +9,8 @@ def pytest_reporter_context(context, config):
     process_context(context, config)
 
 
-@pytest.hookimpl(optionalhook=True)
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item, call):
-    process_func_coverage(item, call)
+    outcome = yield
+    report = outcome.get_result()
+    return process_func_coverage(item, call, report)
