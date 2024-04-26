@@ -1,5 +1,16 @@
 # MLVP
 
+#### 软件依赖
+
+mlvp 依赖以下软件包和工具
+
+报告依赖包： pytest, pytest-reporter-html1. 如果需要支持多进程，要安装 pytest-xdist
+覆盖率工具： verilator_coverage, genhtml (from lcov)
+
+```bash
+pip install pytest pytest-reporter-html1 pytest-xdist
+```
+
 #### functional coverage （功能覆盖率统计）
 
 功能覆盖率统计，即用户可以定义一些列“条件”，然后统计这些条件是否被触发，触发多少次等。mlvp 提供的功能覆盖率可以对具有 value 的对象（不能是int、str 等非object类型），按照条件进行统计。例如统计 x.value 是否在 [1,2,3]中出现过：
@@ -69,3 +80,14 @@ def pytest_runtest_makereport(item, call):
     report = outcome.get_result()
     return process_func_coverage(item, call, report)
 ```
+
+#### 测试执行
+
+```bash
+git clone mlvp-git-url
+cd mlvp
+PYTHONPATH=. python test/test_reporter.py
+```
+
+将会在test/report目录中生成测试报告
+
