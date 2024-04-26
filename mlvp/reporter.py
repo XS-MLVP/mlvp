@@ -6,13 +6,20 @@ import os
 import sys
 import uuid
 from .funcov import CovGroup
+from .base import convert_line_coverage
 
 
 def get_template_dir():
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
 
 
+__output_report_dir__ = None
 def generate_pytest_report(report, args=["-s"]):
+    report_dir = os.path.dirname(os.path.abspath(report))
+    if not os.path.exists(report_dir):
+        os.makedirs(report_dir)
+    global __output_report_dir__
+    __output_report_dir__ = report_dir
     defualt_args = [
             "--template=html/mlvp.html",
             "--template-dir=" + get_template_dir(),
@@ -27,11 +34,15 @@ def generate_pytest_report(report, args=["-s"]):
 def __update_line_coverage__(__line_coverage__=None):
     if __line_coverage__ is None:
         return None
+    if len(__line_coverage__) == 0:
+        return None
+    hint, all = convert_line_coverage(__line_coverage__, os.path.join(__output_report_dir__, "line_dat"))
+    assert os.path.exists(os.path.join(__output_report_dir__, "line_dat/index.html")), "Failed to convert line coverage"
+
     return {
-        "hints": 100,
-        "total": 1000,
-        "grate": 90,
-        "detail": "detail.html",
+        "hints": hint,
+        "total": all,
+        "grate": __report_info__["meta"].get("line_grate", 90),
     }
 
 

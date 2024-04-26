@@ -3,6 +3,7 @@ ovip/
 UT_*/
 
 test/report.html
+test/report/
 
 # Wave Files
 *.fst

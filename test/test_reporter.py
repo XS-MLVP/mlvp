@@ -1,7 +1,7 @@
 
 import os
 import sys
-from mlvp.reporter import generate_pytest_report
+from mlvp.reporter import generate_pytest_report, set_meta_info
 
 import mlvp.funcov as fc
 from mlvp.reporter import set_func_coverage
@@ -30,7 +30,8 @@ def test_must_fail():
 
 
 def sample_report():
-    report = os.path.join(os.path.dirname(os.path.abspath(__file__)), "report.html")
+    set_meta_info("line_grate", 10)
+    report = os.path.join(os.path.dirname(os.path.abspath(__file__)), "report/report.html")
     result = generate_pytest_report(report)
     print("sample_report pid: ", os.getpid())
 
