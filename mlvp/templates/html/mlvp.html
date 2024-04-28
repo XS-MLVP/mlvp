@@ -63,15 +63,31 @@ function dragElement(elmnt) {
     {% set hints_g = coverages.functional.group_num_hints %}
     {% set hints_p = coverages.functional.point_num_hints %}
     {% set hints_b = coverages.functional.bin_num_hints %}
-    {% set rate_g = hints_g / total_g * 100 %}
-    {% set rate_p = hints_p / total_p * 100 %}
-    {% set rate_b = hints_b / total_b * 100 %}
+
+    {% if total_g != 0 %}
+      {% set rate_g = hints_g / total_g * 100 %}
+    {% else %}
+      {% set rate_g = 0 %}
+    {% endif %}
+
+    {% if total_p != 0 %}
+      {% set rate_p = hints_p / total_p * 100 %}
+    {% else %}
+      {% set rate_p = 0 %}
+    {% endif %}
+
+    {% if total_b != 0 %}
+      {% set rate_b = hints_b / total_b * 100 %}
+    {% else %}
+      {% set rate_b = 0 %}
+    {% endif %}
+
     {% set fc_grate = coverages.functional.grate %}
     {% set show_once = coverages.functional.has_once %}
 
     <div style="text-align: center;">
       Groups: {{hints_g}}/{{total_g}} (<span style="font-weight: bold; color: {% if rate_g < fc_grate %}red {% else  %} green {% endif %};">{{rate_g}}%</span>) &nbsp;&nbsp;&nbsp;&nbsp;
-      Points: {{hints_p}}/{{total_p}} (<span style="font-weight: bold; color: {% if rate_p < fc_grate %}red {% else  %} green {% endif %};">{{rate_p}}%</span>) &nbsp;&nbsp;&nbsp;&nbsp; 
+      Points: {{hints_p}}/{{total_p}} (<span style="font-weight: bold; color: {% if rate_p < fc_grate %}red {% else  %} green {% endif %};">{{rate_p}}%</span>) &nbsp;&nbsp;&nbsp;&nbsp;
       Bins:  {{hints_b}}/{{total_b}}  (<span style="font-weight: bold; color: {% if rate_b < fc_grate %}red {% else  %} green {% endif %};">{{rate_b}}%</span>)
     </div>
     <ul>
@@ -85,7 +101,16 @@ function dragElement(elmnt) {
             Point: {{point.name}} {% if point.hinted %}<span style="float: right; color: green;">Passed</span>{% else %}<span style="float: right; color: red;">Failed</span> {% endif %}</li>
           <ul>
           {% for bin in point.bins %}
-            <li>Bin: {{bin.name}} {% if bin.hinted !=0 %}<span style="float: right; color: green;">{{bin.hints}}</span>{% else %}<span style="float: right; color: red;">{{bin.hints}}</span> {% endif %}</li>
+            <li>Bin: {{bin.name}} {% if total_b != 0 %}
+                {% if bin.hinted != 0 %}
+                  <span style="float: right; color: green;">{{bin.hints}}</span>
+                {% else %}
+                  <span style="float: right; color: red;">{{bin.hints}}</span>
+                {% endif %}
+              {% else %}
+                <span style="float: right; color: red;">0</span>
+              {% endif %}
+            </li>
           {% endfor %}
           </ul>
         {% endfor %}

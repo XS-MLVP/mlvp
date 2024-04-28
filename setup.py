@@ -5,7 +5,6 @@ this_directory = path.abspath(path.dirname(__file__))
 with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     my_long_description = f.read()
 
-
 setup(
     # https://pypi.org/search/?q=&o=&c=Topic+%3A%3A+Software+Development+%3A%3A+Build+Tools
     classifiers=[
@@ -30,6 +29,11 @@ setup(
     url="https://github.com/XS-MLVP/mlvp",
 
     packages=find_packages(),
+
+      package_data={
+        'mlvp': ['templates/html/*',
+                 'templates/html/icons/*'],
+    },
 
     long_description_content_type="text/markdown",
 )
