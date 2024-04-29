@@ -5,6 +5,7 @@
 mlvp 依赖以下软件包和工具
 
 报告依赖包： pytest, pytest-reporter-html1. 如果需要支持多进程，要安装 pytest-xdist
+
 覆盖率工具： verilator_coverage, genhtml (from lcov)
 
 ```bash
@@ -45,6 +46,19 @@ g.add_watch_point(x, {"bin_name_range3-5": lambda x: int(x) in [1,2,3]},
 ```
 
 一个覆盖组（CovGroup）中可以有多个覆盖点（cover point），当所有覆盖点都hint时，该组标记为hint。一个覆盖点可以由多个 bin 组成，只有但其中所有bin对应的条件都满足时，该覆盖点才会被标记为hint。
+
+```python
+
+def test_funcov_error(request): 
+    ...
+    g = fc.CovGroup("coverage_group_2")
+    g3 = fc.CovGroup("coverage_group_3")
+    ...
+    set_func_coverage(request, [g,g3])
+    # or
+    set_func_coverage(request, g,)
+```
+最后通过set_func_coverage接口收集Coverage Group，其group参数可以是CovGroup或者CovGroup的数组。
 
 
 #### 生成测试报告
