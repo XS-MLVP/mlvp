@@ -86,9 +86,9 @@ function dragElement(elmnt) {
     {% set show_once = coverages.functional.has_once %}
 
     <div style="text-align: center;">
-      Groups: {{hints_g}}/{{total_g}} (<span style="font-weight: bold; color: {% if rate_g < fc_grate %}red {% else  %} green {% endif %};">{{rate_g}}%</span>) &nbsp;&nbsp;&nbsp;&nbsp;
-      Points: {{hints_p}}/{{total_p}} (<span style="font-weight: bold; color: {% if rate_p < fc_grate %}red {% else  %} green {% endif %};">{{rate_p}}%</span>) &nbsp;&nbsp;&nbsp;&nbsp;
-      Bins:  {{hints_b}}/{{total_b}}  (<span style="font-weight: bold; color: {% if rate_b < fc_grate %}red {% else  %} green {% endif %};">{{rate_b}}%</span>)
+      Groups: {{hints_g}}/{{total_g}} (<span style="font-weight: bold; color: {% if rate_g < fc_grate %}red {% else  %} green {% endif %};">{{rate_g|round(2)}}%</span>) &nbsp;&nbsp;&nbsp;&nbsp;
+      Points: {{hints_p}}/{{total_p}} (<span style="font-weight: bold; color: {% if rate_p < fc_grate %}red {% else  %} green {% endif %};">{{rate_p|round(2)}}%</span>) &nbsp;&nbsp;&nbsp;&nbsp;
+      Bins:  {{hints_b}}/{{total_b}}  (<span style="font-weight: bold; color: {% if rate_b < fc_grate %}red {% else  %} green {% endif %};">{{rate_b|round(2)}}%</span>)
     </div>
     <ul>
       {% for group in coverages.functional.groups %}
