@@ -110,12 +110,12 @@ def process_context(context, config):
     for t in context["tests"]:
         for p in t["phases"]:
             if hasattr(p["report"], "__coverage_group__"):
-                fc_data = p["report"].__coverage_group__
-                key = "%s-%s" % (fc_data["hash"], fc_data["id"])
-                if key in coverage_func_keys:
-                    continue
-                coverage_func_keys.append(key)
-                coverage_func_list.append(fc_data["data"])
+                for fc_data in p["report"].__coverage_group__:
+                    key = "%s-%s" % (fc_data["hash"], fc_data["id"])
+                    if key in coverage_func_keys:
+                        continue
+                    coverage_func_keys.append(key)
+                    coverage_func_list.append(fc_data["data"])
             if hasattr(p["report"], "__line_coverage__"):
                 lc_data = p["report"].__line_coverage__
                 key = "%s-%s" % (lc_data["hash"], lc_data["id"])
@@ -131,7 +131,10 @@ def process_context(context, config):
 
 
 def set_func_coverage(request, g):
-    assert isinstance(g, CovGroup), "g should be an instance of CovGroup"
+    if not isinstance(g, list):
+        g = [g]
+    for i in g:
+        assert isinstance(i, CovGroup), "g should be an instance of CovGroup or list of CovGroup"
     request.node.__coverage_group__ = g
 
 
@@ -144,13 +147,16 @@ def process_func_coverage(item, call, report):
     if call.when != 'teardown':
         return
     if hasattr(item, "__coverage_group__"):
-        assert isinstance(item.__coverage_group__, CovGroup), "item.__coverage_group__ should be an instance of CovGroup"
-        str_func_coverage = str(item.__coverage_group__)
-        report.__coverage_group__ = {
-            "hash": "%s" % hash(str_func_coverage),
-            "id": "H%s-P%s" % (uuid.getnode(), os.getpid()),
-            "data": str_func_coverage
-        }
+        groups = []
+        for g in item.__coverage_group__:
+            assert isinstance(g, CovGroup), "item.__coverage_group__ should be an instance of CovGroup"
+            str_func_coverage = str(g)
+            groups.append({
+                "hash": "%s" % hash(str_func_coverage),
+                "id": "H%s-P%s" % (uuid.getnode(), os.getpid()),
+                "data": str_func_coverage
+            })
+        report.__coverage_group__ = groups
     if hasattr(item, "__line_coverage__"):
         assert isinstance(item.__line_coverage__, str), "item.__line_coverage__ should be a string"
         report.__line_coverage__ = {

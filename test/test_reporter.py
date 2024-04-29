@@ -16,12 +16,13 @@ class TextData(object):
 def test_funcov_error(request): 
     v = TextData(1)
     g = fc.CovGroup("coverage_group_2")
+    g3 = fc.CovGroup("coverage_group_3")
 
     # 0.use default check functions
     g.add_watch_point(v, {"bin_name_is1":      fc.Eq(1),
                           "bin_name_range3-5": fc.In([3,4,5])
                           }, name="watch_point_1")
-    set_func_coverage(request, g)
+    set_func_coverage(request, [g,g3])
     print("test_funcov_error pid: ", os.getpid(), file=sys.stderr)
 
 
