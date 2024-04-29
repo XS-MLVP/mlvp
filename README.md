@@ -68,12 +68,10 @@ mlvp库提供生成测试报告的功能，具体接口如下：
 ```python
 import mlvp.reporter as rp
 
-# 需要在 master 节点执行
-
 rp.set_user_info(name, code)                    # 设置报告中的user和code信息
 rp.set_meta_info(key, value, is_del=False)      # 设置 metadata，当 is_del == True 时，删除 key 对应的数据
 rp.set_line_good_rate(90)                       # 设置当line覆盖率大于等于90时，为绿色，否则为红色
-rp.generate_pytest_report(report, args=["-s"])  # 运行测试，生成报告。report为生成文件的名字，args为传入pytest的参数
+rp.generate_pytest_report(report, args=["-s"])  # 运行测试，生成报告。report为生成文件的名字，args为传入pytest的参数, -s时显示tests中的输出
 
 ```
 
@@ -94,6 +92,15 @@ def pytest_runtest_makereport(item, call):
     outcome = yield
     report = outcome.get_result()
     return process_func_coverage(item, call, report)
+```
+
+#### 多进程支持
+
+默认情况下pytest中的test是顺序执行的，为了提高测试效率，可安装插件pytest-xdist插件支持test多进程执行。安装完插件后，通过参数-n设置并发度：
+
+```python
+rp.generate_pytest_report(report, args=["-s", "-n auto"]) # 设置为自动配置，通常情况下有多少个cpu，自动开启
+rp.generate_pytest_report(report, args=["-s", "-n 4"])    # 设置4进程并发执行
 ```
 
 #### 测试执行
