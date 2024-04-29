@@ -35,5 +35,11 @@ setup(
                  'templates/html/icons/*'],
     },
 
+    install_requires=[
+        'pytest==7.4.3',
+        'pytest-reporter-html1>=0.8.4',
+        'pytest-xdist>=3.5.0',
+    ],
+
     long_description_content_type="text/markdown",
 )

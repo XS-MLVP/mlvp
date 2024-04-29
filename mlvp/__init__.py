@@ -5,3 +5,5 @@ from .asynchronous import Event, Queue, sleep
 from .triggers import *
 
 from .interface import Interface
+
+from .logger import logger, setup_logging, summary
