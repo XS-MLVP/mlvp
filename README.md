@@ -27,11 +27,11 @@ mlvp 中提供了若干使用的协程方法，以支持在 python 中更方便�
 ```python
 import mlvp
 
-async def my_test:
+async def my_test():
     # do something
     pass
 
-mlvp.run(my_test)
+mlvp.run(my_test())
 ```
 
 #### 创建协程任务
@@ -43,11 +43,11 @@ mlvp.run(my_test)
 ```python
 import mlvp
 
-async def my_test:
+async def my_test():
     # do something
     pass
 
-async def main:
+async def main():
     # 等待 my_test 运行完成
     await my_test()
 
@@ -56,7 +56,7 @@ async def main:
 
     # do something
 
-mlvp.run(main)
+mlvp.run(main())
 ```
 
 #### 创建并使用时钟
@@ -259,6 +259,7 @@ class MyInterface(Interface):
     ```python
     interface = MyInterface.from_regex(dut, r"io_(signal\d)")
     ```
+
     此时，signal_list 中的信号会与正则表达式中的捕获组进行匹配，匹配成功的信号会被连接，如果有多个捕获组，会将它们捕获到的字符串连接在一起进行匹配。
 
 如此一来，用户可以在自定义的软件模块中，通过如下的方式访问接口，而无需关心 DUT 的接口名称。
@@ -294,6 +295,7 @@ def my_module(interface):
 #### 参数
 
 可在 Interface 实例化时传入某些参数以开启某些特性：
+
 - `without_check` 默认为 False，当为 True 时，不会对接口的信号进行检查
 - `allow_unconnected` 默认为 True, 当为 False 时，不能存在未连接的信号
 - `allow_unconnected_access` 默认为 True, 当为 False 时，无法访问未连接的信号
