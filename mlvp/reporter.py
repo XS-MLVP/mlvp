@@ -42,7 +42,7 @@ def __update_line_coverage__(__line_coverage__=None):
     return {
         "hints": hint,
         "total": all,
-        "grate": __report_info__["meta"].get("line_grate", 90),
+        "grate": __report_info__.get("line_grate", 90),
     }
 
 
@@ -178,3 +178,7 @@ def set_meta_info(key, value, is_del=False):
         del __report_info__["meta"][key]
     else:
         __report_info__["meta"][key] = value
+
+def set_line_good_rate(rate):
+    global __report_info__
+    __report_info__["line_grate"] = rate

@@ -72,6 +72,7 @@ import mlvp.reporter as rp
 
 rp.set_user_info(name, code)                    # 设置报告中的user和code信息
 rp.set_meta_info(key, value, is_del=False)      # 设置 metadata，当 is_del == True 时，删除 key 对应的数据
+rp.set_line_good_rate(90)                       # 设置当line覆盖率大于等于90时，为绿色，否则为红色
 rp.generate_pytest_report(report, args=["-s"])  # 运行测试，生成报告。report为生成文件的名字，args为传入pytest的参数
 
 ```
