@@ -1,3 +1,7 @@
+# 简介
+
+**MLVP**(**M**ulti-**L**anguage **V**erification **P**latform)是为多语言硬件验证提供的一套基础验证框架，目前支持 python 语言。其在多语言验证工具 [picker](https://github.com/XS-MLVP/picker) 所生成的 Python DUT 上提供了更为高级的验证特性，例如协程支持、覆盖率收集与报告生成等功能。
+
 # 目录
 
 - [简介](#简介)
@@ -24,12 +28,6 @@
     - [两比特饱和计数器 （TwoBitsCounter）](#两比特饱和计数器-twobitscounter)
     - [伪 LRU 算法 （PLRU）](#伪-lru-算法-plru)
 
-
-
-
-# 简介
-
-**MLVP**(**M**ulti-**L**anguage **V**erification **P**latform)是为多语言硬件验证提供的一套基础验证框架，目前支持 python 语言。其在多语言验证工具 [picker](https://github.com/XS-MLVP/picker) 所生成的 Python DUT 上提供了更为高级的验证特性，例如协程支持、覆盖率收集与报告生成等功能。
 
 # 安装
 
