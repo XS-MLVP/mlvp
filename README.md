@@ -252,11 +252,11 @@ def setup_logging(log_level=logging.INFO, format=default_format, log_file=None)
 
 ```python
 import mlvp
-mlvp.logger.debug("This is a debug message", extra={"log_id": "dut"})
-mlvp.logger.info("This is an info message")
-mlvp.logger.warning("This is a warning message", extra={"log_id": "interface"})
-mlvp.logger.error("This is an error message")
-mlvp.logger.critical("This is a critical message")
+mlvp.debug("This is a debug message", extra={"log_id": "dut"})
+mlvp.info("This is an info message")
+mlvp.warning("This is a warning message", extra={"log_id": "interface"})
+mlvp.error("This is an error message")
+mlvp.critical("This is a critical message")
 ```
 
 ## 接口 (Interface)
