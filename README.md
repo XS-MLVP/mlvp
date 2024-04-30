@@ -245,10 +245,10 @@ MLVP 库内置了一个 logger，并设置好了默认的输出格式，MLVP 中
 logger 默认设置了一个 handler 用于输出到控制台，用户可以通过如下函数对 logger 进行配置，该函数支持更改日志级别、日志格式、设置日志输出文件。
 
 ```python
-def setup_logging(log_level=logging.INFO, format=default_format, log_file=None)
+def setup_logging(log_level =logging.INFO, format=default_format, console_display=True, log_file=None)
 ```
 
-用户可以通过如下方式使用 logger 输出日志信息：
+用户可以通过如下方式使用内置记录器输出日志信息：
 
 ```python
 import mlvp
