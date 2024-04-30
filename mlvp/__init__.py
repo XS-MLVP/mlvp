@@ -6,4 +6,5 @@ from .triggers import *
 
 from .interface import Interface
 
-from .logger import mlvp_logger, setup_logging, summary
+from .logger import get_logger, setup_logging, summary
+from .logger import log, debug, info, warning, error, critical

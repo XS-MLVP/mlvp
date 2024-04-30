@@ -1,5 +1,5 @@
 import re
-from .logger import mlvp_logger
+from .logger import *
 from .triggers import ClockCycles
 
 class Interface:
@@ -33,7 +33,7 @@ class Interface:
             if getattr(self, signal) is None:
                 if not allow_unconnected:
                     raise ValueError(f"signal \"{signal}\" is not connected")
-                mlvp_logger.warning(f"signal \"{signal}\" is not connected")
+                warning(f"signal \"{signal}\" is not connected")
 
     def __str__(self):
         return type(self).__name__ + "(\n" + \
@@ -56,7 +56,7 @@ class Interface:
         for signal in self.signals_list:
             if signal in dut_ports:
                 Interface.__check_signal(dut_ports[signal])
-                mlvp_logger.info(f"signal \"{signal}\" is connected")
+                info(f"signal \"{signal}\" is connected")
                 setattr(self, signal, dut_ports[signal])
             else:
                 setattr(self, signal, None)
