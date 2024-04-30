@@ -25,43 +25,91 @@ class StatsHandler(logging.Handler):
     def get_stats(self):
         return self.stats
 
-# MLVP Global Logger
-logger = logging.getLogger("MLVP")
-stats_handler = StatsHandler()
-screen_handler = logging.StreamHandler()
-
-# Default Formatter
-default_format = '%(name)s_%(levelname)s @%(filename)s:%(lineno)d%(log_id)s:\t%(message)s'
 class MLVPFormatter(logging.Formatter):
+    """Custom formatter for MLVP logs
+    It supports log_id attribute display in the log record
+    """
+
     def format(self, record):
-        if not hasattr(record, 'log_id'):
+        if not hasattr(record, 'log_id') or record.log_id == '':
             record.log_id = ''
         else:
             record.log_id = f"(id: {record.log_id})"
         return super().format(record)
 
+
+#####################################
+# MLVP Global Logging Configuration #
+#####################################
+
+mlvp_logger = logging.getLogger("MLVP")
+
+def get_logger() -> logging.Logger:
+    """Returns the global logger for MLVP"""
+
+    return mlvp_logger
+
+
+# Global handlers
+# stats_handler is used to collect statistics about the logs
+stats_handler = StatsHandler()
+# screen_handler is used to display logs on the screen
+screen_handler = logging.StreamHandler()
+
+
+# Default format and formatter
+default_format = '%(name)s_%(levelname)s @%(filename)s:%(lineno)d%(log_id)s:\t%(message)s'
 default_formatter = MLVPFormatter(default_format)
 
 
-def setup_logging(log_level=logging.INFO, format=default_format, log_file=None):
+def setup_logging(log_level =logging.INFO, format=default_format, console_display=True, log_file=None):
+    """
+    Setup the logging configuration for MLVP
+
+    Parameters
+    ----------
+    log_level : int
+        The log level for the logger
+    format : str
+        The format of the log message
+    console_display : bool
+        Whether to display logs on the console
+    log_file : str
+        The log file name to write logs, if None, logs are not written to a file
+    """
+
     logging.basicConfig(level=log_level, format=format, handlers=[])
+    mlvp_logger.setLevel(log_level)
+    mlvp_logger.addHandler(stats_handler)
 
-    screen_handler.setLevel(log_level)
-    screen_handler.setFormatter(default_formatter)
-    logger.addHandler(screen_handler)
-
-    logger.setLevel(log_level)
-    logger.addHandler(stats_handler)
+    if console_display:
+        screen_handler.setLevel(log_level)
+        screen_handler.setFormatter(default_formatter)
+        mlvp_logger.addHandler(screen_handler)
 
     if log_file:
         fh = logging.FileHandler(log_file, mode='w')
         fh.setLevel(log_level)
         fh.setFormatter(default_formatter)
-        logger.addHandler(fh)
+        mlvp_logger.addHandler(fh)
 
-    return logger
+setup_logging()
+
+##########################
+# MLVP Logging Functions #
+##########################
+
+log = mlvp_logger.log
+debug = mlvp_logger.debug
+info = mlvp_logger.info
+warning = mlvp_logger.warning
+error = mlvp_logger.error
+critical = mlvp_logger.critical
+exception = mlvp_logger.exception
 
 def summary():
+    """Display a summary of the logs"""
+
     summary_str = "Log Summary\n"
     summary_str += "============\n"
     summary_str += "* Report counts by severity\n"
@@ -71,6 +119,4 @@ def summary():
     for k, v in stats_handler.id_stats.items():
         summary_str += f"{k}:\t{v}\n"
 
-    logger.info(summary_str)
-
-setup_logging()
+    mlvp_logger.info(summary_str)
