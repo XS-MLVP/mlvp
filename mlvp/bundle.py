@@ -2,9 +2,9 @@ import re
 from .logger import *
 from .triggers import ClockCycles
 
-class Interface:
+class Bundle:
     signals_list = []
-    sub_interfaces = []
+    sub_bundles = []
 
     @staticmethod
     def __check_signal(signal):
@@ -12,8 +12,8 @@ class Interface:
             assert hasattr(signal, attr), f"signal \"{signal}\" must have be a Pin"
 
     def __first_connected_signal(self):
-        for sub_interface_name, _ in self.sub_interfaces:
-            first_signal = getattr(self, sub_interface_name).__first_connected_signal()
+        for sub_bundle_name, _ in self.sub_bundles:
+            first_signal = getattr(self, sub_bundle_name).__first_connected_signal()
             if first_signal is not None:
                 return first_signal
         for signal in self.signals_list:
@@ -45,17 +45,17 @@ class Interface:
                  without_check = False,
                  allow_unconnected = True,
                  allow_unconnected_access = True):
-        """Create an interface from a dut with a dictionary to map signals to ports"""
+        """Create an bundle from a dut with a dictionary to map signals to ports"""
 
-        # set sub-interfaces as attributes
-        for sub_interface_name, sub_interface_creator in self.sub_interfaces:
-            setattr(self, sub_interface_name, sub_interface_creator(dut_ports))
+        # set sub-bundles as attributes
+        for sub_bundle_name, sub_bundle_creator in self.sub_bundles:
+            setattr(self, sub_bundle_name, sub_bundle_creator(dut_ports))
 
         # set signals as attributes
         assert len(self.signals_list) > 0, "signals_list must not be empty"
         for signal in self.signals_list:
             if signal in dut_ports:
-                Interface.__check_signal(dut_ports[signal])
+                Bundle.__check_signal(dut_ports[signal])
                 info(f"signal \"{signal}\" is connected")
                 setattr(self, signal, dut_ports[signal])
             else:
@@ -84,15 +84,15 @@ class Interface:
     async def Step(self, ncycles = 1):
         """Wait for the clock for ncycles"""
 
-        assert self.clock_event is not None, "interface must have one connected signal"
+        assert self.clock_event is not None, "bundle must have one connected signal"
         await ClockCycles(self.clock_event, ncycles)
 
     def collect(self):
         """Collect all signals values"""
 
         signals = {signal: getattr(self, signal).value for signal in self.signals_list}
-        sub_interfaces = {sub_interface_name: getattr(self, sub_interface_name).collect() for sub_interface_name, _ in self.sub_interfaces}
-        return {**signals, **sub_interfaces}
+        sub_bundles = {sub_bundle_name: getattr(self, sub_bundle_name).collect() for sub_bundle_name, _ in self.sub_bundles}
+        return {**signals, **sub_bundles}
 
     def assign(self, signals):
         """Assign all signals values"""
@@ -100,9 +100,9 @@ class Interface:
         for signal in self.signals_list:
             if signal in signals:
                 getattr(self, signal).value = signals[signal]
-        for sub_interface_name, _ in self.sub_interfaces:
-            if sub_interface_name in signals:
-                getattr(self, sub_interface_name).assign(signals[sub_interface_name])
+        for sub_bundle_name, _ in self.sub_bundles:
+            if sub_bundle_name in signals:
+                getattr(self, sub_bundle_name).assign(signals[sub_bundle_name])
 
 
     @classmethod
@@ -110,7 +110,7 @@ class Interface:
                     without_check = False,
                     allow_unconnected = True,
                     allow_unconnected_access = True):
-        """Create an interface from a dut or ports_list with a prefix in its signals"""
+        """Create an bundle from a dut or ports_list with a prefix in its signals"""
 
         if not isinstance(dut, dict):
             dut = cls._get_dut_ports_list(dut)
@@ -123,7 +123,7 @@ class Interface:
                    without_check = False,
                    allow_unconnected = True,
                    allow_unconnected_access = True):
-        """Create an interface from a dut or ports_list with a regex matching its signals"""
+        """Create an bundle from a dut or ports_list with a regex matching its signals"""
 
         if not isinstance(dut, dict):
             dut = cls._get_dut_ports_list(dut)
@@ -136,7 +136,7 @@ class Interface:
                                without_check = False,
                                allow_unconnected = False,
                                allow_unconnected_access = False):
-        """Create an interface from a ports list with a prefix in its signals"""
+        """Create an bundle from a ports list with a prefix in its signals"""
 
         ports = {}
         for signal_name, signal_value in ports_list.items():
@@ -153,7 +153,7 @@ class Interface:
                                without_check = False,
                                allow_unconnected = False,
                                allow_unconnected_access = False):
-        """Create an interface from a ports list with a regex matching its signals"""
+        """Create an bundle from a ports list with a regex matching its signals"""
 
         ports = {}
         for signal_name, signal_value in ports_list.items():

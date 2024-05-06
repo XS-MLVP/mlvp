@@ -18,7 +18,7 @@
     - [多进程支持](#多进程支持)
     - [测试执行](#测试执行)
   - [日志输出 (logger)](#日志输出-logger)
-  - [接口 (Interface)](#接口-interface)
+  - [接口 (Bundle)](#接口-bundle)
     - [定义接口](#定义接口)
     - [接口实例化 & 连接](#接口实例化--连接)
     - [子接口使用](#子接口使用)
@@ -254,12 +254,12 @@ def setup_logging(log_level =logging.INFO, format=default_format, console_displa
 import mlvp
 mlvp.debug("This is a debug message", extra={"log_id": "dut"})
 mlvp.info("This is an info message")
-mlvp.warning("This is a warning message", extra={"log_id": "interface"})
+mlvp.warning("This is a warning message", extra={"log_id": "bundle"})
 mlvp.error("This is an error message")
 mlvp.critical("This is a critical message")
 ```
 
-## 接口 (Interface)
+## 接口 (Bundle)
 
 MLVP 中提供了一个接口类，用于为软件模块的编写提供虚拟接口。用户可以在不获取到 DUT 的情况下，通过定义一个虚拟接口，编写软件模块进行驱动。获取 DUT 后，只需要将 DUT 与虚拟接口进行连接，软件模块即可直接驱动 DUT。这方便了我们定义一组用于完成某个特定功能的接口集合，同时也使得软件模块的编写与 DUT 的具体实现解耦。
 
@@ -268,19 +268,19 @@ MLVP 中提供了一个接口类，用于为软件模块的编写提供虚拟接
 用户可以通过如下方式定义一个接口：
 
 ```python
-class MyInterface(Interface):
+class MyBundle(Bundle):
     signal_list = ["signal1", "signal2", "signal3"]
 ```
-只需要继承 `Interface` 类，并定义 `signal_list` 即可。
+只需要继承 `Bundle` 类，并定义 `signal_list` 即可。
 
 ### 接口实例化 & 连接
 
-接口实例化的过程即是连接的过程，Interface 类提供了多种方式用于连接接口，方法如下:
+接口实例化的过程即是连接的过程，Bundle 类提供了多种方式用于连接接口，方法如下:
 
 1. 通过字典方式连接
 
     ```python
-    interface = MyInterface({
+    bundle = MyBundle({
         signal1: dut.io_signal1,
         signal2: dut.io_signal2,
         signal3: dut.io_signal3,
@@ -290,13 +290,13 @@ class MyInterface(Interface):
 2. 通过前缀方式连接
 
     ```python
-    interface = MyInterface.from_prefix(dut, "io_")
+    bundle = MyBundle.from_prefix(dut, "io_")
     ```
 
 3. 通过正则表达式连接
 
     ```python
-    interface = MyInterface.from_regex(dut, r"io_(signal\d)")
+    bundle = MyBundle.from_regex(dut, r"io_(signal\d)")
     ```
 
     此时，signal_list 中的信号会与正则表达式中的捕获组进行匹配，匹配成功的信号会被连接，如果有多个捕获组，会将它们捕获到的字符串连接在一起进行匹配。
@@ -304,36 +304,36 @@ class MyInterface(Interface):
 如此一来，用户可以在自定义的软件模块中，通过如下的方式访问接口，而无需关心 DUT 的接口名称。
 
 ```python
-def my_module(interface):
-    interface.signal1.value = 1
-    print(interface.signal2.value)
+def my_module(bundle):
+    bundle.signal1.value = 1
+    print(bundle.signal2.value)
 ```
 
 ### 子接口使用
 
-Interface 提供了子接口的功能，可以在将一个 Interface 作为另一个 Interface 的子接口，这样可以更方便地对接口进行管理。
+Bundle 提供了子接口的功能，可以在将一个 Bundle 作为另一个 Bundle 的子接口，这样可以更方便地对接口进行管理。
 
-添加子接口只需要在定义时将接口的创建方法放入 `sub_interfaces` 中，并指定名称即可，例如：
+添加子接口只需要在定义时将接口的创建方法放入 `sub_bundles` 中，并指定名称即可，例如：
 
 ```python
-class MyInterface2:
+class MyBundle2:
     signal_list = ["signal4", "signal5"]
-    sub_interfaces = [
-        ("signal_set1", lambda dut: MyInterface.from_prefix(dut, "")),
+    sub_bundles = [
+        ("signal_set1", lambda dut: MyBundle.from_prefix(dut, "")),
     ]
 ```
 
 访问子接口时通过子接口名称进行访问，例如：
 
 ```python
-def my_module(interface):
-    interface.signal_set1.signal1.value = 1
-    print(interface.signal_set1.signal2.value)
+def my_module(bundle):
+    bundle.signal_set1.signal1.value = 1
+    print(bundle.signal_set1.signal2.value)
 ```
 
 ### 参数
 
-可在 Interface 实例化时传入某些参数以开启某些特性：
+可在 Bundle 实例化时传入某些参数以开启某些特性：
 
 - `without_check` 默认为 False，当为 True 时，不会对接口的信号进行检查
 - `allow_unconnected` 默认为 True, 当为 False 时，不能存在未连接的信号
@@ -341,7 +341,7 @@ def my_module(interface):
 
 ### 实用函数
 
-Interface 提供了一些实用函数，用于方便地对接口进行操作：
+Bundle 提供了一些实用函数，用于方便地对接口进行操作：
 
 - `collect` 用于收集接口中的信号值，返回一个字典
 - `assign` 用于将一个字典中的值赋给接口中的信号
@@ -349,14 +349,14 @@ Interface 提供了一些实用函数，用于方便地对接口进行操作：
 
 ## 验证实用模块
 
-MLVP 提供了一些验证实用模块，用于方便用户编写验证代码，这些模块被放置在 `mlvp.utils` 中。
+MLVP 提供了一些验证实用模块，用于方便用户编写验证代码，这些模块被放置在 `mlvp.modules` 中。
 
 ### 两比特饱和计数器 （TwoBitsCounter）
 
 `TwoBitsCounter` 是一个两比特饱和计数器，用于分支预测器的验证。用户可以通过如下方式使用：
 
 ```python
-from mlvp.utils import TwoBitsCounter
+from mlvp.modules import TwoBitsCounter
 
 # 创建一个两比特饱和计数器
 counter = TwoBitsCounter()
@@ -373,7 +373,7 @@ counter.update(True)
 `PLRU` 是伪 LRU 算法的软件实现，常用于替换策略的验证。用户可以通过如下方式使用：
 
 ```python
-from mlvp.utils import PLRU
+from mlvp.modules import PLRU
 
 # 创建一个伪 LRU 算法，参数为行数
 plru = PLRU(32)
