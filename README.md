@@ -166,13 +166,16 @@ g.add_watch_point(x, {"bin_name_range3-5": lambda x: int(x) in [1,2,3]},
 
 def test_funcov_error(request):
     ...
-    g = fc.CovGroup("coverage_group_2")
-    g3 = fc.CovGroup("coverage_group_3")
+    g = CovGroup("coverage_group_2")
+    g3 = CovGroup("coverage_group_3")
     ...
+    # 添加多个group
     set_func_coverage(request, [g,g3])
-    # or
+    # or 添加一个group
     set_func_coverage(request, g,)
+    # 一个 test_* 只能调用一次 set_func_coverage，多次调用结果会被覆盖
 ```
+
 最后通过set_func_coverage接口收集Coverage Group，其group参数可以是CovGroup或者CovGroup的数组。
 
 
@@ -189,14 +192,14 @@ rp.set_user_info(name, code)
 # 设置 metadata，当 is_del == True 时，删除 key 对应的数据
 rp.set_meta_info(key, value, is_del=False)
 
-# 设置当line覆盖率大于等于90时，为绿色，否则为红色
+# 设置当line覆盖率大于等于90%时，为绿色，否则为红色
 rp.set_line_good_rate(90)
 
 # 运行测试，生成报告。report为生成文件的名字，args为传入pytest的参数, -s时显示tests中的输出
 rp.generate_pytest_report(report, args=["-s"])
 ```
 
-测试时，需要在conftest.py中添加如下hook代码进行配置:
+测试时，需要在[conftest.py](https://docs.pytest.org/en/7.1.x/reference/fixtures.html#conftest-py-sharing-fixtures-across-multiple-files)中添加如下hook代码进行配置:
 
 ```python
 import pytest
