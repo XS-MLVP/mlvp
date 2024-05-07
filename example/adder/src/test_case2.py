@@ -22,6 +22,8 @@ async def adder_test_2(dut):
         # check
         print("a: ", dut.a.value, " b: ", dut.b.value, " cin: ", dut.cin.value, " sum: ", sum, "expected: ", dut.a.value + dut.b.value + dut.cin.value)
 
+        assert(sum == dut.a.value + dut.b.value + dut.cin.value)
+
 
 def test_case2(request):
     dut = Adder32(
