@@ -34,7 +34,7 @@ def sample_report():
     set_line_good_rate(10)
     set_meta_info("test_key", "test_value")
     report = os.path.join(os.path.dirname(os.path.abspath(__file__)), "report/report.html")
-    result = generate_pytest_report(report)
+    result = generate_pytest_report(report, ["-s", "test"])
     print("sample_report pid: ", os.getpid())
 
 
