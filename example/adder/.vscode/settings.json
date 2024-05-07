@@ -1,0 +1,6 @@
+{
+    "python.analysis.extraPaths": [
+        "/home/yzcc/XS-MLVP/Nutshell-cache/build/picker_out_Cache/UT_Cache",
+        "./build"
+    ]
+}
