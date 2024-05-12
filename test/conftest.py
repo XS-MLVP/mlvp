@@ -4,7 +4,7 @@ import pytest
 from mlvp.reporter import process_context, process_func_coverage
 
 
-@pytest.hookimpl(optionalhook=True)
+@pytest.hookimpl(trylast=True, optionalhook=True)
 def pytest_reporter_context(context, config):
     process_context(context, config)
 
