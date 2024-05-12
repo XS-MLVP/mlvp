@@ -18,7 +18,7 @@ def test_funcov(request):
 
     # 0.use default check functions
     g.add_watch_point(v, {"bin_name_is1":      fc.Eq(1),
-                          "bin_name_range3-5": fc.In([3,4,5])
+                          "bin_name_range3-5": [fc.In([3,4]), fc.In([3,4,5])]
                           }, name="watch_point_1")
 
     # 1.use custom check functions in arg bins
