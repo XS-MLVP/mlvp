@@ -48,11 +48,11 @@ class Bundle:
         """Create an bundle from a dut with a dictionary to map signals to ports"""
 
         # set sub-bundles as attributes
+        assert len(self.sub_bundles) > 0 or len(self.signals_list) > 0, "sub_bundles or signals_list must not be empty"
         for sub_bundle_name, sub_bundle_creator in self.sub_bundles:
             setattr(self, sub_bundle_name, sub_bundle_creator(dut_ports))
 
         # set signals as attributes
-        assert len(self.signals_list) > 0, "signals_list must not be empty"
         for signal in self.signals_list:
             if signal in dut_ports:
                 Bundle.__check_signal(dut_ports[signal])

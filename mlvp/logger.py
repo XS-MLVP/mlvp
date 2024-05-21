@@ -61,8 +61,14 @@ screen_handler = logging.StreamHandler()
 default_format = '%(name)s_%(levelname)s @%(filename)s:%(lineno)d%(log_id)s:\t%(message)s'
 default_formatter = MLVPFormatter(default_format)
 
+# log levels
+INFO = logging.INFO
+DEBUG = logging.DEBUG
+WARNING = logging.WARNING
+ERROR = logging.ERROR
+CRITICAL = logging.CRITICAL
 
-def setup_logging(log_level =logging.INFO, format=default_format, console_display=True, log_file=None):
+def setup_logging(log_level =INFO, format=default_format, console_display=True, log_file=None):
     """
     Setup the logging configuration for MLVP
 
