@@ -27,6 +27,8 @@
   - [验证实用模块](#验证实用模块)
     - [两比特饱和计数器 （TwoBitsCounter）](#两比特饱和计数器-twobitscounter)
     - [伪 LRU 算法 （PLRU）](#伪-lru-算法-plru)
+    - [64位 随机数生成器 （LFSR_64）](#64位-随机数生成器-LFSR_64)
+
 
 
 # 安装
@@ -387,3 +389,21 @@ replace_line = plru.get()
 # 更新，参数为更新时访问的行
 plru.update(5)
 ```
+
+### 64位 随机数生成器 （LFSR_64）
+
+`LFSR_64` 是64位随机数生成器的软件实现，用于模拟硬件中随机数的生成。用户可以通过如下方式使用：
+
+```python
+from mlvp.modules import LFSR_64
+
+# 创建一个64位随机数生成器，参数为随机数种子
+lfsr = LFSR_64(1) # 随机数种子默认为1
+
+# 获取随机数，如果不更新状态，返回的值不会发生变化
+random = lfsr.rand
+
+# 更新生成器的状态
+lfsr.step()
+```
+
