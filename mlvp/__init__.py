@@ -6,6 +6,7 @@ from .triggers import *
 
 from .bundle import Bundle
 
+from . import logger
 from .logger import get_logger, setup_logging, summary
 from .logger import log, debug, info, warning, error, critical
 

@@ -152,8 +152,13 @@ class CovGroup(object):
                 raise ValueError("Invalid value %s for key %s" % (bins, key))
             bins = {"anonymous": bins}
         for k, v in bins.items():
-            if not callable(v):
-                raise ValueError("Invalid value %s for key %s" % (v, k))        
+            if not isinstance(v, (list, tuple)):
+                if not callable(v):
+                    raise ValueError("Invalid value %s for key %s" % (v, k))
+            else:
+                for c in v:
+                    if not callable(c):
+                        raise ValueError("Invalid value %s for key %s" % (c, k))
         self.cov_points[key] = {"taget": target, 
                                 "bins": bins, 
                                 "check_func": check_func, 
@@ -172,7 +177,19 @@ class CovGroup(object):
             if check_func:
                 hints += 1 if check_func(points["taget"], b, points) else 0
             else:
-                hints += 1 if b(points["taget"]) else 0
+                checked = False
+                if callable(b):
+                     checked = b(points["taget"])
+                elif isinstance(b, (list, tuple)):
+                     checked = True
+                     for c in b:
+                         if not c(points["taget"]):
+                            checked = False
+                            break
+                else:
+                    raise ValueError("Invalid value %s for key %s, Need callable bin/bins" % (b, k))
+                hints += 1 if checked else 0
+
             if hints == 0:
                 hinted = False
             
