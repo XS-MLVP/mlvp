@@ -25,6 +25,14 @@ class StatsHandler(logging.Handler):
     def get_stats(self):
         return self.stats
 
+# ANSI escape sequences for colors
+RESET = "\x1b[0m"
+YELLOW = "\x1b[33m"
+RED = "\x1b[31m"
+GREEN = "\x1b[32m"
+BLUE = "\x1b[34m"
+WHITE = "\x1b[37m"
+
 class MLVPFormatter(logging.Formatter):
     """Custom formatter for MLVP logs
     It supports log_id attribute display in the log record
@@ -35,7 +43,18 @@ class MLVPFormatter(logging.Formatter):
             record.log_id = ''
         else:
             record.log_id = f"(id: {record.log_id})"
-        return super().format(record)
+
+        log_colors = {
+            'DEBUG': BLUE,
+            'INFO': WHITE,
+            'WARNING': YELLOW,
+            'ERROR': RED,
+            'CRITICAL': RED
+        }
+        
+        color = log_colors.get(record.levelname, WHITE)
+        message = super().format(record)
+        return f"{color}{message}{RESET}"
 
 
 #####################################
