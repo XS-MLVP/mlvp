@@ -51,7 +51,7 @@ class MLVPFormatter(logging.Formatter):
             'ERROR': RED,
             'CRITICAL': RED
         }
-        
+
         color = log_colors.get(record.levelname, WHITE)
         message = super().format(record)
         return f"{color}{message}{RESET}"
@@ -87,7 +87,7 @@ WARNING = logging.WARNING
 ERROR = logging.ERROR
 CRITICAL = logging.CRITICAL
 
-def setup_logging(log_level =INFO, format=default_format, console_display=True, log_file=None):
+def setup_logging(log_level=WARNING, format=default_format, console_display=True, log_file=None):
     """
     Setup the logging configuration for MLVP
 
