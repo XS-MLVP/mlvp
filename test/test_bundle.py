@@ -7,9 +7,7 @@ from mlvp import Bundle
 
 class FakePin:
     def __init__(self):
-        self.xdata, self.event = None, None
-
-
+        self.xdata, self.event, self.value = None, None, None
 
 class FakeDUT:
     def __init__(self):
@@ -37,12 +35,33 @@ def test_bundle():
     bundle_1 = BundleA.from_prefix(prefix="io_").set_name("bundle_1").bind(dut)
     bundle_2 = BundleA.from_regex(regex="io_(.*)").set_name("bundle_2").bind(dut)
 
+    print(bundle_2)
+
     bundle_3 = BundleA.from_dict({
         "a": "io_a",
         "b": "io_b",
         "c_1": "io_c_1",
         "c_2": "io_c_2"
     }).set_name("bundle_3").bind(dut)
+
+    bundle_1.assign({
+        "a": 1,
+        "b": 2,
+        "c.1": 3,
+        "c.2": 4
+    }, multilevel=False)
+    print(bundle_1.collect(multilevel=False))
+
+    bundle_1.assign({
+        "a": 5,
+        "b": 6,
+        "c": {
+            "1": 7,
+            "2": 8
+        }
+    }, multilevel=True)
+    print(bundle_1.collect(multilevel=True))
+
 
 
     class BundleC(Bundle):

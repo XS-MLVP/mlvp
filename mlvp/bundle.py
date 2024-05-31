@@ -13,7 +13,7 @@ class Bundle(MObject):
     def __init__(self):
         """
         Create a bundle.
-        Users should use from_prefix, from_regex, or from_dict to create a bundle
+        Users should use from_prefix, from_regex, or from_dict to create a bundle instance
         instead of calling this method directly.
         """
 
@@ -53,19 +53,72 @@ class Bundle(MObject):
 
     def bind(self, dut, unconnected_signal_access=True):
         """
-        Bind the dut's signal to this bundle.
+        Bind the dut's signal to this bundle. it will overwrites the previous bind.
 
         Args:
             dut: The dut to bind the bundle to.
+            unconnected_signal_access: Whether unconnected signals could be accessed.
 
         Returns:
             The bundle itself.
         """
 
+        self.__unbind_all()
         self.__bind_from_signal_list(list(self.__all_signals(dut)), self.name,
                                      unconnected_signal_access)
         return self
 
+    def collect(self, multilevel=True):
+        """
+        Collect all signals values.
+
+        Args:
+            multilevel: When multilevel is true, the subbundle signal values are put
+                        into a secondary dictionary. Otherwise, the dictionary returned
+                        will have only one level, with the sub-bundles separated by dots
+                        in keys.
+
+        Returns:
+            A dictionary of all signals values in the bundle.
+        """
+
+        if multilevel:
+            signals = {signal: getattr(self, signal).value for signal in self.signals}
+            sub_bundles = {sub_bundle_name: getattr(self, sub_bundle_name).collect()
+                           for sub_bundle_name, _ in self.__all_sub_bundles()}
+            return {**signals, **sub_bundles}
+        else:
+            signals = {signal: getattr(self, signal).value for signal in self.signals}
+            for sub_bundle_name, sub_bundle in self.__all_sub_bundles():
+                sub_bundle_dict = sub_bundle.collect()
+                for sub_bundle_signal, value in sub_bundle_dict.items():
+                    signals[f"{sub_bundle_name}.{sub_bundle_signal}"] = value
+            return signals
+
+    def assign(self, dict, multilevel=True):
+        """
+        Assign all signals values.
+
+        Args:
+            dict: The dictionary to assign the signals.
+            multilevel: When multilevel is true, the subbundle signal values are taken
+                        from a secondary dictionary. Otherwise, the dictionary should have
+                        only one level, with the sub-bundles separated by dots in keys.
+        """
+
+        if multilevel:
+            for signal, value in dict.items():
+                if signal in self.signals:
+                    getattr(self, signal).value = value
+                elif any(subbundle[0]==signal for subbundle in self.__all_sub_bundles()):
+                    getattr(self, signal).assign(value)
+        else:
+            for signal, value in dict.items():
+                if signal in self.signals:
+                    getattr(self, signal).value = value
+                else:
+                    sub_bundle_name, sub_bundle_signal = signal.split(".", 1)
+                    getattr(self, sub_bundle_name).assign({sub_bundle_signal: value})
 
     @classmethod
     def from_prefix(cls, prefix=""):
@@ -141,6 +194,14 @@ class Bundle(MObject):
 
         return NewBundle
 
+    def __str__(self):
+        signals = ", ".join([f"{signal}: {getattr(self, signal)}" for signal in self.signals])
+        sub_bundles = ", ".join([f"{sub_bundle_name}: {getattr(self, sub_bundle_name)}"
+                                 for sub_bundle_name, _ in self.__all_sub_bundles()])
+        if sub_bundles != "":
+            signals = signals + ", " + sub_bundles
+        return f"{type(self).__name__}({signals})"
+
     def __all_sub_bundles(self):
         """
         Yield all sub-bundles of the bundle.
@@ -153,7 +214,6 @@ class Bundle(MObject):
         for attr in dir(self):
             if isinstance(getattr(self, attr), Bundle):
                 yield (attr, getattr(self, attr))
-
 
     def __add_signal_attr(self, signal_name, signal, info_bundle_name, info_dut_name):
         """
@@ -203,6 +263,17 @@ class Bundle(MObject):
                 warning(f"signal \"{Bundle.__appended_level_string(level_string, signal)}\" is not found")
                 if unconnected_signal_access:
                     setattr(self, signal, self._dummy_signal)
+
+    def __unbind_all(self):
+        """
+        Unbind all signals to the bundle.
+        """
+
+        for signal in self.signals:
+            if hasattr(self, signal):
+                delattr(self, signal)
+        for _, sub_bundle in self.__all_sub_bundles():
+            sub_bundle.__unbind_all()
 
     def __bind_from_signal_list(self, all_signals, level_string, unconnected_signal_access):
         """
@@ -372,7 +443,6 @@ class Bundle(MObject):
                 self.clock_event = sub_bundle.clock_event
 
         return remain_signals
-
 
     @staticmethod
     def __is_instance_of_xpin(signal):
