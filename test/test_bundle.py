@@ -15,6 +15,8 @@ class FakeDUT:
         self.io_b = FakePin()
         self.io_c_1 = FakePin()
         self.io_c_2 = FakePin()
+        self.io_d_1 = FakePin()
+        self.io_d_2 = FakePin()
 
 def test_bundle():
     mlvp.setup_logging(log_level=mlvp.logger.INFO)
@@ -24,11 +26,12 @@ def test_bundle():
         signals = ["1", "2", "3"]
 
     class BundleA(Bundle):
-        signals = ["a", "b", "d"]
+        signals = ["a", "b", "e"]
 
         def __init__(self):
             super().__init__()
             self.c = BundleB.from_prefix(prefix="c_")
+            self.d = BundleB.from_prefix(prefix="d_")
 
 
 
@@ -44,7 +47,8 @@ def test_bundle():
         "a": "io_a",
         "b": "io_b",
         "c_1": "io_c_1",
-        "c_2": "io_c_2"
+        "c_2": "io_c_2",
+        "d_1": "io_d_1",
     }).set_name("bundle_3").bind(dut)
 
     bundle_1.assign({
@@ -72,7 +76,7 @@ def test_bundle():
         def __init__(self):
             super().__init__()
             self.c = Bundle.new_class_from_list(["1", "2", "3"]).from_prefix("c_")
-            self.d = Bundle.new_class_from_list(["1", "2", "3"]).from_prefix("c_")
+            self.d = Bundle.new_class_from_list(["1", "2", "3"]).from_prefix("d_")
 
     bundle_4 = BundleC.from_prefix("io_").set_name("bundle_4").bind(dut)
 

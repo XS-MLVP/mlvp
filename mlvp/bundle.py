@@ -361,14 +361,13 @@ class Bundle(MObject):
             unconnected_signal_access: Whether unconnected signals could be accessed.
 
         Returns:
-            A list of signals that are not connected.  The name in the list is changed
-            to the key in the dictionary.
+            A list of signals that are not connected.
         """
 
-        # Filter all the signals contained in the dictionary and connect the signals contained
-        # in the bundle. Remain signals that are not connected are added into remain_signals
-        connected_signals = []
-        remain_signals = []
+        connected_signals = [] # Matched and connected signals
+        matching_signals = []  # Matched but not connected signals,
+                               # item's name in the list is the name without prefix
+        remain_signals = []    # Not matched signals
         for signal in all_signals:
             if signal["name"] in dict.values():
                 name = list(dict.keys())[list(dict.values()).index(signal["name"])]
@@ -381,24 +380,26 @@ class Bundle(MObject):
                                             level_string, name))
                     connected_signals.append(name)
                 else:
-                    remain_signals.append({
+                    matching_signals.append({
                         "name": name,
                         "org_name": signal["org_name"],
                         "signal": signal["signal"]
                     })
+            else:
+                remain_signals.append(signal)
         self.__detect_missing_signals(connected_signals, level_string, unconnected_signal_access)
 
         # Bind the remain signals to the sub-bundles
         for sub_bundle_name, sub_bundle in self.__all_sub_bundles():
-            remain_signals = sub_bundle.__bind_from_signal_list(remain_signals,
-                                                                Bundle.__appended_level_string(
-                                                                    level_string, sub_bundle_name),
-                                                                unconnected_signal_access)
+            matching_signals = sub_bundle.__bind_from_signal_list(matching_signals,
+                                                                  Bundle.__appended_level_string(
+                                                                      level_string, sub_bundle_name),
+                                                                  unconnected_signal_access)
             if sub_bundle.__clock_event is not None:
                 self.__clock_event = sub_bundle.__clock_event
 
-        return remain_signals
-
+        Bundle.__revert_signal_name(matching_signals, all_signals)
+        return matching_signals + remain_signals
 
     def __bind_by_prefix(self, all_signals, prefix, level_string, unconnected_signal_access):
         """
@@ -411,13 +412,13 @@ class Bundle(MObject):
             unconnected_signal_access: Whether unconnected signals could be accessed.
 
         Returns:
-            A list of signals that are not connected. The prefix is removed from the name.
+            A list of signals that are not connected.
         """
 
-        # Filter all the signals containing prefix and connect the signals contained in the bundle.
-        # Remain signals that are not connected are added into remain_signals
-        connected_signals = []
-        remain_signals = []
+        connected_signals = [] # Matched and connected signals
+        matching_signals = []  # Matched but not connected signals,
+                               # item's name in the list is the name without prefix
+        remain_signals = []    # Not matched signals
         for signal in all_signals:
             if signal["name"].startswith(prefix):
                 name_no_prefix = signal["name"][len(prefix):]
@@ -430,23 +431,27 @@ class Bundle(MObject):
                                                level_string, name_no_prefix))
                     connected_signals.append(name_no_prefix)
                 else:
-                    remain_signals.append({
+                    matching_signals.append({
                         "name": signal["name"][len(prefix):],
                         "org_name": signal["org_name"],
                         "signal": signal["signal"]
                     })
+            else:
+                remain_signals.append(signal)
+
         self.__detect_missing_signals(connected_signals, level_string, unconnected_signal_access)
 
         # Bind the remain signals to the sub-bundles
         for sub_bundle_name, sub_bundle in self.__all_sub_bundles():
-            remain_signals = sub_bundle.__bind_from_signal_list(remain_signals,
-                                                                Bundle.__appended_level_string(
-                                                                    level_string, sub_bundle_name),
-                                                                    unconnected_signal_access)
+            matching_signals = sub_bundle.__bind_from_signal_list(matching_signals,
+                                                                  Bundle.__appended_level_string(
+                                                                      level_string, sub_bundle_name),
+                                                                  unconnected_signal_access)
             if sub_bundle.__clock_event is not None:
                 self.__clock_event = sub_bundle.__clock_event
 
-        return remain_signals
+        Bundle.__revert_signal_name(matching_signals, all_signals)
+        return matching_signals + remain_signals
 
     def __bind_by_regex(self, all_signals, regex, level_string, unconnected_signal_access):
         """
@@ -459,13 +464,13 @@ class Bundle(MObject):
             unconnected_signal_access: Whether unconnected signals could be accessed.
 
         Returns:
-            A list of signals that are not connected. The name is the captured group in the regex.
+            A list of signals that are not connected.
         """
 
-        # Filter all the signals matching the regex and connect the signals contained in the bundle.
-        # Remain signals that are not connected are added into remain_signals
-        connect_signals = []
-        remain_signals = []
+        connected_signals = [] # Matched and connected signals
+        matching_signals = []  # Matched but not connected signals,
+                               # item's name in the list is the name in the captured group
+        remain_signals = []    # Not matched signals
         for signal in all_signals:
             match = re.search(regex, signal["name"])
             if match is not None:
@@ -476,25 +481,47 @@ class Bundle(MObject):
                                            info_dut_name=signal["org_name"],
                                            info_bundle_name=Bundle.__appended_level_string(
                                                level_string, name))
-                    connect_signals.append(name)
+                    connected_signals.append(name)
                 else:
-                    remain_signals.append({
+                    matching_signals.append({
                         "name": name,
                         "org_name": signal["org_name"],
                         "signal": signal["signal"]
                     })
-        self.__detect_missing_signals(connect_signals, level_string, unconnected_signal_access)
+            else:
+                remain_signals.append(signal)
+
+        self.__detect_missing_signals(connected_signals, level_string, unconnected_signal_access)
 
         # Bind the remain signals to the sub-bundles
         for sub_bundle_name, sub_bundle in self.__all_sub_bundles():
-            remain_signals = sub_bundle.__bind_from_signal_list(remain_signals,
-                                                                Bundle.__appended_level_string(
-                                                                    level_string, sub_bundle_name),
-                                                                unconnected_signal_access)
+            matching_signals = sub_bundle.__bind_from_signal_list(matching_signals,
+                                                                  Bundle.__appended_level_string(
+                                                                      level_string, sub_bundle_name),
+                                                                  unconnected_signal_access)
             if sub_bundle.__clock_event is not None:
                 self.__clock_event = sub_bundle.__clock_event
 
-        return remain_signals
+        Bundle.__revert_signal_name(matching_signals, all_signals)
+        return matching_signals + remain_signals
+
+    @staticmethod
+    def __revert_signal_name(signal_list, last_signal_list):
+        """
+        Change the item's name in signal_list to the item's name in last_signal_list, if it has the
+        same original name.
+
+        Args:
+            signal_list: A list of signals to revert. this is a list of dictionaries
+                         containing the name, original name, and signal pin of the signal.
+            last_signal_list: The structure of the last signal list is the same as the signal_list.
+        """
+
+        for signal in signal_list:
+            for last_signal in last_signal_list:
+                if signal["org_name"] == last_signal["org_name"]:
+                    signal["name"] = last_signal["name"]
+
 
     @staticmethod
     def __is_instance_of_xpin(signal):
