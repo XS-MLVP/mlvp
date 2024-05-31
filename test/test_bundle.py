@@ -32,7 +32,10 @@ def test_bundle():
 
 
 
-    bundle_1 = BundleA.from_prefix(prefix="io_").set_name("bundle_1").bind(dut)
+    bundle_1 = BundleA().set_name("bundle_1").bind(dut)
+    bundle_1.set_prefix("io_")
+    bundle_1.bind(dut)
+
     bundle_2 = BundleA.from_regex(regex="io_(.*)").set_name("bundle_2").bind(dut)
 
     print(bundle_2)
@@ -50,7 +53,7 @@ def test_bundle():
         "c.1": 3,
         "c.2": 4
     }, multilevel=False)
-    print(bundle_1.collect(multilevel=False))
+    print(bundle_1.as_dict(multilevel=False))
 
     bundle_1.assign({
         "a": 5,
@@ -60,8 +63,7 @@ def test_bundle():
             "2": 8
         }
     }, multilevel=True)
-    print(bundle_1.collect(multilevel=True))
-
+    print(bundle_1.as_dict(multilevel=True))
 
 
     class BundleC(Bundle):
@@ -69,7 +71,7 @@ def test_bundle():
 
         def __init__(self):
             super().__init__()
-            self.c = Bundle.new_list(["1", "2", "3"]).from_prefix("c_")
+            self.c = Bundle.new_class_from_list(["1", "2", "3"]).from_prefix("c_")
 
     bundle_4 = BundleC.from_prefix("io_").set_name("bundle_4").bind(dut)
 

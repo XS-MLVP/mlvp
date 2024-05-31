@@ -13,15 +13,17 @@ class Bundle(MObject):
     def __init__(self):
         """
         Create a bundle.
-        Users should use from_prefix, from_regex, or from_dict to create a bundle instance
-        instead of calling this method directly.
+        Instances created using this method are matched directly in bind. The create
+        instance method provided by from_dict, from_prefix and from_regex enable easier connections.
         """
 
-        self.name = None
-        self.clock_event = None
-        self.connect_method = None # Method for signal connection.
-                                   # It should be "dict", "prefix", or "regex"
-        self.method_value = None
+        self.name = None   # The name of the bundle
+        self.bound = False # Whether the bundle is bound to a DUT
+
+        self.__clock_event = None
+        self.__connect_method = "prefix" # Method for signal connection.
+                                         # It should be "dict", "prefix", or "regex"
+        self.__method_value = ""
 
     def set_name(self, name):
         """
@@ -37,6 +39,51 @@ class Bundle(MObject):
         self.name = name
         return self
 
+    def set_prefix(self, prefix=""):
+        """
+        Set the bundle to bind from prefix.
+
+        Args:
+            prefix: The prefix to match the signals.
+
+        Returns:
+            The bundle itself.
+        """
+
+        self.__connect_method = "prefix"
+        self.__method_value = prefix
+        return self
+
+    def set_regex(self, regex=r""):
+        """
+        Set the bundle to bind from regex.
+
+        Args:
+            regex: The regex to match the signals.
+
+        Returns:
+            The bundle itself.
+        """
+
+        self.__connect_method = "regex"
+        self.__method_value = regex
+        return self
+
+    def set_dict(self, dict={}):
+        """
+        Set the bundle to bind from a dictionary.
+
+        Args:
+            dict: The dictionary to guide bundle connections
+
+        Returns:
+            The bundle itself.
+        """
+
+        self.__connect_method = "dict"
+        self.__method_value = dict
+        return self
+
     async def step(self, ncycles=1):
         """
         Wait for the clock for ncycles.
@@ -46,10 +93,10 @@ class Bundle(MObject):
             ncycles: The number of cycles to wait.
         """
 
-        if self.clock_event is None:
+        if self.__clock_event is None:
             critical("cannot use step in bundle without a connected signal")
 
-        await ClockCycles(self.clock_event, ncycles)
+        await ClockCycles(self.__clock_event, ncycles)
 
     def bind(self, dut, unconnected_signal_access=True):
         """
@@ -63,14 +110,18 @@ class Bundle(MObject):
             The bundle itself.
         """
 
-        self.__unbind_all()
+        if self.bound:
+            warning("bundle is already bound, the previous bind will be overwritten")
+            self.__unbind_all()
+
         self.__bind_from_signal_list(list(self.__all_signals(dut)), self.name,
                                      unconnected_signal_access)
+        self.bound = True
         return self
 
-    def collect(self, multilevel=True):
+    def as_dict(self, multilevel=True):
         """
-        Collect all signals values.
+        Collect all signals values into a dictionary.
 
         Args:
             multilevel: When multilevel is true, the subbundle signal values are put
@@ -84,13 +135,13 @@ class Bundle(MObject):
 
         if multilevel:
             signals = {signal: getattr(self, signal).value for signal in self.signals}
-            sub_bundles = {sub_bundle_name: getattr(self, sub_bundle_name).collect()
+            sub_bundles = {sub_bundle_name: getattr(self, sub_bundle_name).as_dict(multilevel)
                            for sub_bundle_name, _ in self.__all_sub_bundles()}
             return {**signals, **sub_bundles}
         else:
             signals = {signal: getattr(self, signal).value for signal in self.signals}
             for sub_bundle_name, sub_bundle in self.__all_sub_bundles():
-                sub_bundle_dict = sub_bundle.collect()
+                sub_bundle_dict = sub_bundle.as_dict(multilevel)
                 for sub_bundle_signal, value in sub_bundle_dict.items():
                     signals[f"{sub_bundle_name}.{sub_bundle_signal}"] = value
             return signals
@@ -133,8 +184,8 @@ class Bundle(MObject):
         """
 
         new_bundle = cls()
-        new_bundle.connect_method = "prefix"
-        new_bundle.method_value = prefix
+        new_bundle.__connect_method = "prefix"
+        new_bundle.__method_value = prefix
         return new_bundle
 
     @classmethod
@@ -152,8 +203,8 @@ class Bundle(MObject):
         """
 
         new_bundle = cls()
-        new_bundle.connect_method = "regex"
-        new_bundle.method_value = regex
+        new_bundle.__connect_method = "regex"
+        new_bundle.__method_value = regex
         return new_bundle
 
     @classmethod
@@ -171,16 +222,16 @@ class Bundle(MObject):
         """
 
         new_bundle = cls()
-        new_bundle.connect_method = "dict"
-        new_bundle.method_value = dict
+        new_bundle.__connect_method = "dict"
+        new_bundle.__method_value = dict
         return new_bundle
 
     @staticmethod
-    def new_list(signal_list):
+    def new_class_from_list(signal_list):
         """
         Create a new bundle class with a list of signals quickly.
 
-        >>> myBundle = Bundle.new_list(["a", "b", "c"]).from_prefix("io_")
+        >>> myBundle = Bundle.new_class_from_list(["a", "b", "c"]).from_prefix("io_")
 
         Args:
             signal_list: A list of signals.
@@ -227,8 +278,8 @@ class Bundle(MObject):
         """
 
         setattr(self, signal_name, signal)
-        if self.clock_event is None:
-            self.clock_event = signal.event
+        if self.__clock_event is None:
+            self.__clock_event = signal.event
 
         info(f"dut's signal \"{info_dut_name}\" is connected to \"{info_bundle_name}\"")
 
@@ -285,17 +336,17 @@ class Bundle(MObject):
             unconnected_signal_access: Whether unconnected signals could be accessed.
         """
 
-        if self.connect_method == "dict":
-            all_signals = self.__bind_by_dict(all_signals, self.method_value, level_string,
+        if self.__connect_method == "dict":
+            all_signals = self.__bind_by_dict(all_signals, self.__method_value, level_string,
                                               unconnected_signal_access)
-        elif self.connect_method == "prefix":
-            all_signals = self.__bind_by_prefix(all_signals, self.method_value, level_string,
+        elif self.__connect_method == "prefix":
+            all_signals = self.__bind_by_prefix(all_signals, self.__method_value, level_string,
                                                 unconnected_signal_access)
-        elif self.connect_method == "regex":
-            all_signals = self.__bind_by_regex(all_signals, self.method_value, level_string,
+        elif self.__connect_method == "regex":
+            all_signals = self.__bind_by_regex(all_signals, self.__method_value, level_string,
                                                unconnected_signal_access)
         else:
-            raise ValueError("connect_method must be 'dict', 'prefix', or 'regex'")
+            raise ValueError("__connect_method must be 'dict', 'prefix', or 'regex'")
 
 
     def __bind_by_dict(self, all_signals, dict, level_string, unconnected_signal_access):
@@ -342,8 +393,8 @@ class Bundle(MObject):
                                                                 Bundle.__appended_level_string(
                                                                     level_string, sub_bundle_name),
                                                                 unconnected_signal_access)
-            if sub_bundle.clock_event is not None:
-                self.clock_event = sub_bundle.clock_event
+            if sub_bundle.__clock_event is not None:
+                self.__clock_event = sub_bundle.__clock_event
 
         return remain_signals
 
@@ -391,8 +442,8 @@ class Bundle(MObject):
                                                                 Bundle.__appended_level_string(
                                                                     level_string, sub_bundle_name),
                                                                     unconnected_signal_access)
-            if sub_bundle.clock_event is not None:
-                self.clock_event = sub_bundle.clock_event
+            if sub_bundle.__clock_event is not None:
+                self.__clock_event = sub_bundle.__clock_event
 
         return remain_signals
 
@@ -439,8 +490,8 @@ class Bundle(MObject):
                                                                 Bundle.__appended_level_string(
                                                                     level_string, sub_bundle_name),
                                                                 unconnected_signal_access)
-            if sub_bundle.clock_event is not None:
-                self.clock_event = sub_bundle.clock_event
+            if sub_bundle.__clock_event is not None:
+                self.__clock_event = sub_bundle.__clock_event
 
         return remain_signals
 
