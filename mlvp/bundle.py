@@ -17,7 +17,7 @@ class Bundle(MObject):
         instance method provided by from_dict, from_prefix and from_regex enable easier connections.
         """
 
-        self.name = None   # The name of the bundle
+        self.name = ""     # The name of the bundle
         self.bound = False # Whether the bundle is bound to a DUT
 
         self.__clock_event = None
@@ -311,7 +311,7 @@ class Bundle(MObject):
 
         for signal in self.signals:
             if signal not in connected_signals:
-                warning(f"signal \"{Bundle.__appended_level_string(level_string, signal)}\" is not found")
+                warning(f"signal \"{Bundle.__appended_level_string(level_string, signal)}\" is not found in dut")
                 if unconnected_signal_access:
                     setattr(self, signal, self._dummy_signal)
 
@@ -348,6 +348,7 @@ class Bundle(MObject):
         else:
             raise ValueError("__connect_method must be 'dict', 'prefix', or 'regex'")
 
+        return all_signals
 
     def __bind_by_dict(self, all_signals, dict, level_string, unconnected_signal_access):
         """

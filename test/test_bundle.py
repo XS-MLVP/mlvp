@@ -36,7 +36,7 @@ def test_bundle():
     bundle_1.set_prefix("io_")
     bundle_1.bind(dut)
 
-    bundle_2 = BundleA.from_regex(regex="io_(.*)").set_name("bundle_2").bind(dut)
+    bundle_2 = BundleA.from_regex(regex="io_(.*)").bind(dut)
 
     print(bundle_2)
 
@@ -72,6 +72,7 @@ def test_bundle():
         def __init__(self):
             super().__init__()
             self.c = Bundle.new_class_from_list(["1", "2", "3"]).from_prefix("c_")
+            self.d = Bundle.new_class_from_list(["1", "2", "3"]).from_prefix("c_")
 
     bundle_4 = BundleC.from_prefix("io_").set_name("bundle_4").bind(dut)
 
