@@ -3,6 +3,150 @@ from .logger import *
 from .triggers import ClockCycles
 from .base import MObject
 
+class BindMethod(MObject):
+    """
+    A bind method is a way to connect signals to a bundle.
+    """
+
+    def __init__(self, method, value):
+        self.method = method
+        self.method_value = value
+
+    def bind(self, bundle, all_signals, level_string, detection_mode):
+        """
+        Bind the signals to the bundle.
+
+        Args:
+            bundle: The bundle to bind the signals to.
+            all_signals: A list of signals to bind.
+            level_string: The string of the current level.
+            detection_mode: Whether the method is in detection mode. if it is, the bundle
+                            will not be connected to the signals.
+
+        Returns:
+            A tuple of three lists:
+            - A list of connected signals.
+            - A list of matching signals that are not connected.  The item's name in this
+              list is changed.
+            - A list of signals that are not matched.
+        """
+
+        raise NotImplementedError
+
+class PrefixBindMethod(BindMethod):
+    """
+    A bind method that connects signals to a bundle by matching the prefix of the signal name.
+    """
+
+    def __init__(self, prefix):
+        super().__init__("prefix", prefix)
+
+    def bind(self, bundle, all_signals, level_string, detection_mode):
+        connected_signals = [] # Matched and connected signals
+        matching_signals = []  # Matched but not connected signals,
+                               # item's name in the list is the name without prefix
+        remain_signals = []    # Not matched signals
+
+        prefix = self.method_value
+        for signal in all_signals:
+            if signal["name"].startswith(prefix):
+                name_no_prefix = signal["name"][len(prefix):]
+
+                if name_no_prefix in bundle.signals:
+                    if not detection_mode:
+                        bundle.add_signal_attr(name_no_prefix,
+                                                 signal["signal"],
+                                                 info_dut_name=signal["org_name"],
+                                                 info_bundle_name=Bundle.appended_level_string(
+                                                    level_string, name_no_prefix))
+                        connected_signals.append(name_no_prefix)
+                else:
+                    matching_signals.append({
+                        "name": signal["name"][len(prefix):],
+                        "org_name": signal["org_name"],
+                        "signal": signal["signal"]
+                    })
+            else:
+                remain_signals.append(signal)
+
+        return (connected_signals, matching_signals, remain_signals)
+
+class RegexBindMethod(BindMethod):
+    """
+    A bind method that connects signals to a bundle by matching the regex of the signal name.
+    """
+
+    def __init__(self, regex):
+        super().__init__("regex", regex)
+
+    def bind(self, bundle, all_signals, level_string, detection_mode):
+        connected_signals = [] # Matched and connected signals
+        matching_signals = []  # Matched but not connected signals,
+                               # item's name in the list is the name in the captured group
+        remain_signals = []    # Not matched signals
+
+        regex = self.method_value
+        for signal in all_signals:
+            match = re.search(regex, signal["name"])
+            if match is not None:
+                name = "".join(match.groups())
+                if name in bundle.signals:
+                    if not detection_mode:
+                        bundle.add_signal_attr(name,
+                                                 signal["signal"],
+                                                 info_dut_name=signal["org_name"],
+                                                 info_bundle_name=Bundle.appended_level_string(
+                                                     level_string, name))
+                    connected_signals.append(name)
+                else:
+                    matching_signals.append({
+                        "name": name,
+                        "org_name": signal["org_name"],
+                        "signal": signal["signal"]
+                    })
+            else:
+                remain_signals.append(signal)
+
+        return (connected_signals, matching_signals, remain_signals)
+
+class DictBindMethod(BindMethod):
+    """
+    A bind method that connects signals to a bundle by matching the dictionary.
+    """
+
+    def __init__(self, dict):
+        super().__init__("dict", dict)
+
+    def bind(self, bundle, all_signals, level_string, detection_mode):
+        connected_signals = [] # Matched and connected signals
+        matching_signals = []  # Matched but not connected signals,
+                               # item's name in the list is the name without prefix
+        remain_signals = []    # Not matched signals
+
+        dict = self.method_value
+        for signal in all_signals:
+            if signal["name"] in dict.values():
+                name = list(dict.keys())[list(dict.values()).index(signal["name"])]
+
+                if name in bundle.signals:
+                    if not detection_mode:
+                        bundle.add_signal_attr(name,
+                                                 signal["signal"],
+                                                 info_dut_name=signal["org_name"],
+                                                 info_bundle_name=Bundle.appended_level_string(
+                                                     level_string, name))
+                    connected_signals.append(name)
+                else:
+                    matching_signals.append({
+                        "name": name,
+                        "org_name": signal["org_name"],
+                        "signal": signal["signal"]
+                    })
+            else:
+                remain_signals.append(signal)
+
+        return (connected_signals, matching_signals, remain_signals)
+
 class Bundle(MObject):
     """
     A bundle is a collection of signals in a DUT.
@@ -21,9 +165,7 @@ class Bundle(MObject):
         self.bound = False # Whether the bundle is bound to a DUT
 
         self.__clock_event = None
-        self.__connect_method = "prefix" # Method for signal connection.
-                                         # It should be "dict", "prefix", or "regex"
-        self.__method_value = ""
+        self.__connect_method = PrefixBindMethod("")
 
     def set_name(self, name):
         """
@@ -50,8 +192,7 @@ class Bundle(MObject):
             The bundle itself.
         """
 
-        self.__connect_method = "prefix"
-        self.__method_value = prefix
+        self.__connect_method = PrefixBindMethod(prefix)
         return self
 
     def set_regex(self, regex=r""):
@@ -65,8 +206,7 @@ class Bundle(MObject):
             The bundle itself.
         """
 
-        self.__connect_method = "regex"
-        self.__method_value = regex
+        self.__connect_method = RegexBindMethod(regex)
         return self
 
     def set_dict(self, dict={}):
@@ -80,8 +220,8 @@ class Bundle(MObject):
             The bundle itself.
         """
 
-        self.__connect_method = "dict"
-        self.__method_value = dict
+        self.__connect_method = DictBindMethod(dict)
+        self.__check_dict_value(dict)
         return self
 
     async def step(self, ncycles=1):
@@ -115,7 +255,7 @@ class Bundle(MObject):
             self.__unbind_all()
 
         self.__bind_from_signal_list(list(self.__all_signals(dut)), self.name,
-                                     unconnected_signal_access)
+                                     [], unconnected_signal_access, False)
         self.bound = True
         return self
 
@@ -184,8 +324,7 @@ class Bundle(MObject):
         """
 
         new_bundle = cls()
-        new_bundle.__connect_method = "prefix"
-        new_bundle.__method_value = prefix
+        new_bundle.__connect_method = PrefixBindMethod(prefix)
         return new_bundle
 
     @classmethod
@@ -203,8 +342,7 @@ class Bundle(MObject):
         """
 
         new_bundle = cls()
-        new_bundle.__connect_method = "regex"
-        new_bundle.__method_value = regex
+        new_bundle.__connect_method = RegexBindMethod(regex)
         return new_bundle
 
     @classmethod
@@ -222,8 +360,8 @@ class Bundle(MObject):
         """
 
         new_bundle = cls()
-        new_bundle.__connect_method = "dict"
-        new_bundle.__method_value = dict
+        new_bundle.__connect_method = DictBindMethod(dict)
+        new_bundle.__check_dict_value(dict)
         return new_bundle
 
     @staticmethod
@@ -244,6 +382,23 @@ class Bundle(MObject):
             signals = signal_list
 
         return NewBundle
+
+    def add_signal_attr(self, signal_name, signal, info_bundle_name, info_dut_name):
+        """
+        Add a signal attribute to the bundle and log the connection.
+
+        Args:
+            signal_name: The name of the signal in the bundle.
+            signal: The signal itself.
+            info_bundle_name: The name of the bundle in the log.
+            info_dut_name: The name of the signal in the DUT in the log.
+        """
+
+        setattr(self, signal_name, signal)
+        if self.__clock_event is None:
+            self.__clock_event = signal.event
+
+        info(f"dut's signal \"{info_dut_name}\" is connected to \"{info_bundle_name}\"")
 
     def __str__(self):
         signals = ", ".join([f"{signal}: {getattr(self, signal)}" for signal in self.signals])
@@ -266,25 +421,8 @@ class Bundle(MObject):
             if isinstance(getattr(self, attr), Bundle):
                 yield (attr, getattr(self, attr))
 
-    def __add_signal_attr(self, signal_name, signal, info_bundle_name, info_dut_name):
-        """
-        Add a signal attribute to the bundle and log the connection.
-
-        Args:
-            signal_name: The name of the signal in the bundle.
-            signal: The signal itself.
-            info_bundle_name: The name of the bundle in the log.
-            info_dut_name: The name of the signal in the DUT in the log.
-        """
-
-        setattr(self, signal_name, signal)
-        if self.__clock_event is None:
-            self.__clock_event = signal.event
-
-        info(f"dut's signal \"{info_dut_name}\" is connected to \"{info_bundle_name}\"")
-
     def __detect_missing_signals(self, connected_signals, level_string,
-                                 unconnected_signal_access):
+                                 rule_stack, unconnected_signal_access):
         """
         Detect missing signals in the bundle. Log a warning if a signal is not found.
         When unconnected_signal_access is True, set the unconnected signals as dummy
@@ -311,7 +449,10 @@ class Bundle(MObject):
 
         for signal in self.signals:
             if signal not in connected_signals:
-                warning(f"signal \"{Bundle.__appended_level_string(level_string, signal)}\" is not found in dut")
+                rule_string = Bundle.__get_rule_string(rule_stack, signal)
+                warning(f"The signal that can be connected to \"{Bundle.appended_level_string(level_string, signal)}\" "
+                        f"is not found in dut, it should satisfy rule \"{rule_string}\"")
+
                 if unconnected_signal_access:
                     setattr(self, signal, self._dummy_signal)
 
@@ -326,184 +467,68 @@ class Bundle(MObject):
         for _, sub_bundle in self.__all_sub_bundles():
             sub_bundle.__unbind_all()
 
-    def __bind_from_signal_list(self, all_signals, level_string, unconnected_signal_access):
+    def __bind_from_signal_list(self, all_signals, level_string, rule_stack,
+                                unconnected_signal_access, detection_mode):
+
+        rule_stack = rule_stack + [(self.__connect_method.method, self.__connect_method.method_value)]
+        connected_signals, matching_signals, remain_signals = \
+            self.__connect_method.bind(self, all_signals, level_string, detection_mode)
+
+        if not detection_mode:
+            self.__detect_missing_signals(connected_signals, level_string,
+                                        rule_stack, unconnected_signal_access)
+
+        # Bind the remain signals to the sub-bundles
+        for sub_bundle_name, sub_bundle in self.__all_sub_bundles():
+            matching_signals = sub_bundle.__bind_from_signal_list(matching_signals,
+                                                                  Bundle.appended_level_string(
+                                                                      level_string, sub_bundle_name),
+                                                                  rule_stack, unconnected_signal_access,
+                                                                  detection_mode)
+            if sub_bundle.__clock_event is not None:
+                self.__clock_event = sub_bundle.__clock_event
+
+        Bundle.__revert_signal_name(matching_signals, all_signals)
+        return matching_signals + remain_signals
+
+
+    def __check_dict_value(self, dict):
         """
-        Bind signals to the bundle from a list of signals.
+        Check if the values of the dictionary are valid.
 
         Args:
-            all_signals: A list of signals to bind.
-            level_string: The string of the current level.
-            unconnected_signal_access: Whether unconnected signals could be accessed.
+            dict: The dictionary to check.
         """
 
-        if self.__connect_method == "dict":
-            all_signals = self.__bind_by_dict(all_signals, self.__method_value, level_string,
-                                              unconnected_signal_access)
-        elif self.__connect_method == "prefix":
-            all_signals = self.__bind_by_prefix(all_signals, self.__method_value, level_string,
-                                                unconnected_signal_access)
-        elif self.__connect_method == "regex":
-            all_signals = self.__bind_by_regex(all_signals, self.__method_value, level_string,
-                                               unconnected_signal_access)
+        signal_list = [{
+            "name": value,
+            "org_name": value,
+            "signal": None
+        } for _, value in dict.items()]
+
+        unconnected_signals = self.__bind_from_signal_list(signal_list, self.name, [], False, True)
+        unconnected_signal_names = [signal["name"] for signal in unconnected_signals]
+
+        warning(f"The signal names {unconnected_signal_names} in {type(self).__name__}'s connection dictionary "
+                "are invalid, because they cannot match any signals from the Bundle")
+
+    @staticmethod
+    def appended_level_string(level_string, level):
+        """
+        Append a string to the current level string.
+
+        Args:
+            level_string: The current level string.
+            level: The string to append.
+
+        Returns:
+            The appended string.
+        """
+
+        if level_string == "":
+            return level
         else:
-            raise ValueError("__connect_method must be 'dict', 'prefix', or 'regex'")
-
-        return all_signals
-
-    def __bind_by_dict(self, all_signals, dict, level_string, unconnected_signal_access):
-        """
-        Bind signals to the bundle by a dictionary.
-
-        Args:
-            all_signals: A list of signals to bind.
-            dict: A dictionary to map the signals.
-            level_string: The string of the current level.
-            unconnected_signal_access: Whether unconnected signals could be accessed.
-
-        Returns:
-            A list of signals that are not connected.
-        """
-
-        connected_signals = [] # Matched and connected signals
-        matching_signals = []  # Matched but not connected signals,
-                               # item's name in the list is the name without prefix
-        remain_signals = []    # Not matched signals
-        for signal in all_signals:
-            if signal["name"] in dict.values():
-                name = list(dict.keys())[list(dict.values()).index(signal["name"])]
-
-                if name in self.signals:
-                    self.__add_signal_attr(name,
-                                        signal["signal"],
-                                        info_dut_name=signal["org_name"],
-                                        info_bundle_name=Bundle.__appended_level_string(
-                                            level_string, name))
-                    connected_signals.append(name)
-                else:
-                    matching_signals.append({
-                        "name": name,
-                        "org_name": signal["org_name"],
-                        "signal": signal["signal"]
-                    })
-            else:
-                remain_signals.append(signal)
-        self.__detect_missing_signals(connected_signals, level_string, unconnected_signal_access)
-
-        # Bind the remain signals to the sub-bundles
-        for sub_bundle_name, sub_bundle in self.__all_sub_bundles():
-            matching_signals = sub_bundle.__bind_from_signal_list(matching_signals,
-                                                                  Bundle.__appended_level_string(
-                                                                      level_string, sub_bundle_name),
-                                                                  unconnected_signal_access)
-            if sub_bundle.__clock_event is not None:
-                self.__clock_event = sub_bundle.__clock_event
-
-        Bundle.__revert_signal_name(matching_signals, all_signals)
-        return matching_signals + remain_signals
-
-    def __bind_by_prefix(self, all_signals, prefix, level_string, unconnected_signal_access):
-        """
-        Bind signals to the bundle by prefix.
-
-        Args:
-            all_signals: A list of signals to bind.
-            prefix: The prefix to match the signals.
-            level_string: The string of the current level.
-            unconnected_signal_access: Whether unconnected signals could be accessed.
-
-        Returns:
-            A list of signals that are not connected.
-        """
-
-        connected_signals = [] # Matched and connected signals
-        matching_signals = []  # Matched but not connected signals,
-                               # item's name in the list is the name without prefix
-        remain_signals = []    # Not matched signals
-        for signal in all_signals:
-            if signal["name"].startswith(prefix):
-                name_no_prefix = signal["name"][len(prefix):]
-
-                if name_no_prefix in self.signals:
-                    self.__add_signal_attr(name_no_prefix,
-                                           signal["signal"],
-                                           info_dut_name=signal["org_name"],
-                                           info_bundle_name=Bundle.__appended_level_string(
-                                               level_string, name_no_prefix))
-                    connected_signals.append(name_no_prefix)
-                else:
-                    matching_signals.append({
-                        "name": signal["name"][len(prefix):],
-                        "org_name": signal["org_name"],
-                        "signal": signal["signal"]
-                    })
-            else:
-                remain_signals.append(signal)
-
-        self.__detect_missing_signals(connected_signals, level_string, unconnected_signal_access)
-
-        # Bind the remain signals to the sub-bundles
-        for sub_bundle_name, sub_bundle in self.__all_sub_bundles():
-            matching_signals = sub_bundle.__bind_from_signal_list(matching_signals,
-                                                                  Bundle.__appended_level_string(
-                                                                      level_string, sub_bundle_name),
-                                                                  unconnected_signal_access)
-            if sub_bundle.__clock_event is not None:
-                self.__clock_event = sub_bundle.__clock_event
-
-        Bundle.__revert_signal_name(matching_signals, all_signals)
-        return matching_signals + remain_signals
-
-    def __bind_by_regex(self, all_signals, regex, level_string, unconnected_signal_access):
-        """
-        Bind signals to the bundle by regex.
-
-        Args:
-            all_signals: A list of signals to bind.
-            regex: The regex to match the signals.
-            level_string: The string of the current level.
-            unconnected_signal_access: Whether unconnected signals could be accessed.
-
-        Returns:
-            A list of signals that are not connected.
-        """
-
-        connected_signals = [] # Matched and connected signals
-        matching_signals = []  # Matched but not connected signals,
-                               # item's name in the list is the name in the captured group
-        remain_signals = []    # Not matched signals
-        for signal in all_signals:
-            match = re.search(regex, signal["name"])
-            if match is not None:
-                name = "".join(match.groups())
-                if name in self.signals:
-                    self.__add_signal_attr(name,
-                                           signal["signal"],
-                                           info_dut_name=signal["org_name"],
-                                           info_bundle_name=Bundle.__appended_level_string(
-                                               level_string, name))
-                    connected_signals.append(name)
-                else:
-                    matching_signals.append({
-                        "name": name,
-                        "org_name": signal["org_name"],
-                        "signal": signal["signal"]
-                    })
-            else:
-                remain_signals.append(signal)
-
-        self.__detect_missing_signals(connected_signals, level_string, unconnected_signal_access)
-
-        # Bind the remain signals to the sub-bundles
-        for sub_bundle_name, sub_bundle in self.__all_sub_bundles():
-            matching_signals = sub_bundle.__bind_from_signal_list(matching_signals,
-                                                                  Bundle.__appended_level_string(
-                                                                      level_string, sub_bundle_name),
-                                                                  unconnected_signal_access)
-            if sub_bundle.__clock_event is not None:
-                self.__clock_event = sub_bundle.__clock_event
-
-        Bundle.__revert_signal_name(matching_signals, all_signals)
-        return matching_signals + remain_signals
+            return f"{level_string}.{level}"
 
     @staticmethod
     def __revert_signal_name(signal_list, last_signal_list):
@@ -560,22 +585,23 @@ class Bundle(MObject):
                 }
 
     @staticmethod
-    def __appended_level_string(level_string, level):
-        """
-        Append a string to the current level string.
+    def __get_rule_string(rule_stack, signal):
+        rule_string = ""
+        rule_stack = rule_stack + [("prefix", signal)]
 
-        Args:
-            level_string: The current level string.
-            level: The string to append.
+        for rule in rule_stack:
+            if rule[0] == "dict":
+                dict_string = "|".join([f"{value}" for _, value in rule[1].items()])
+                rule_string += f"({dict_string})"
+                break
+            elif rule[0] == "prefix":
+                rule_string += f"{rule[1]}"
+            elif rule[0] == "regex":
+                rule_string += f"{rule[1]} -> "
+            else:
+                raise ValueError(f"rule must be 'dict', 'prefix', or 'regex'")
 
-        Returns:
-            The appended string.
-        """
-
-        if level_string == "":
-            return level
-        else:
-            return f"{level_string}.{level}"
+        return rule_string
 
 
 

@@ -49,6 +49,7 @@ def test_bundle():
         "c_1": "io_c_1",
         "c_2": "io_c_2",
         "d_1": "io_d_1",
+        "abcdefg": "io_abcdefg"
     }).set_name("bundle_3").bind(dut)
 
     bundle_1.assign({
