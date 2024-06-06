@@ -87,6 +87,15 @@ def test_bundle():
     bundle_4.set_all(666)
     print(bundle_4.as_dict())
 
+    bundle_4.assign({
+        "*": 777,
+        "a": 1,
+        "c": {
+            "1": 3,
+            "*": 888,
+        },
+    }, multilevel=True)
+    print(bundle_4.as_dict())
 
 if __name__ == "__main__":
     test_bundle()

@@ -306,11 +306,16 @@ class Bundle(MObject):
         Assign all signals values.
 
         Args:
-            dict: The dictionary to assign the signals.
+            dict: The dictionary to assign the signals. if "*" is in the dictionary,
+                    the value of "*" will be assigned to all signals that are not in the dictionary.
             multilevel: When multilevel is true, the subbundle signal values are taken
                         from a secondary dictionary. Otherwise, the dictionary should have
                         only one level, with the sub-bundles separated by dots in keys.
         """
+
+        if "*" in dict:
+            self.set_all(dict["*"])
+            del dict["*"]
 
         if multilevel:
             for signal, value in dict.items():
