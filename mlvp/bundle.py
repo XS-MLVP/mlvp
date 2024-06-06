@@ -248,7 +248,7 @@ class Bundle(MObject):
         """
 
         for _, signal in self.all_signals():
-            if not signal.IsOutIO():
+            if signal.xdata is not None and not signal.IsOutIO():
                 if write_mode == WriteMode.Imme:
                     signal.AsImmWrite()
                 elif write_mode == WriteMode.Rise:
@@ -338,9 +338,8 @@ class Bundle(MObject):
         """
 
         for _, signal in self.all_signals():
-            if not signal.IsOutIO():
+            if signal.xdata is not None and not signal.IsOutIO():
                 signal.value = value
-
         return self
 
     def assign(self, dict, multilevel=True, level_string=""):
