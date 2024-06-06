@@ -158,15 +158,6 @@ class WriteMode(Enum):
     Rise = 1
     Fall = 2
 
-class IOType(Enum):
-    """
-    The IO type of a bundle.
-    """
-
-    Input = 0
-    Output = 1
-    InOut = 2
-
 class Bundle(MObject):
     """
     A bundle is a collection of signals in a DUT.
@@ -257,8 +248,15 @@ class Bundle(MObject):
         """
 
         for _, signal in self.all_signals():
-            if signal.mIOType != IOType.Output:
-                signal.write_mode = write_mode
+            if not signal.IsOutIO():
+                if write_mode == WriteMode.Imme:
+                    signal.AsImmWrite()
+                elif write_mode == WriteMode.Rise:
+                    signal.AsRiseWrite()
+                elif write_mode == WriteMode.Fall:
+                    signal.AsFallWrite()
+                else:
+                    raise ValueError("write mode must be Imme, Rise, or Fall")
 
         return self
 
@@ -340,7 +338,7 @@ class Bundle(MObject):
         """
 
         for _, signal in self.all_signals():
-            if signal.mIOType != IOType.Output:
+            if not signal.IsOutIO():
                 signal.value = value
 
         return self

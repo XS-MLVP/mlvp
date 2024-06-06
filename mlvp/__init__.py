@@ -4,7 +4,7 @@ from .asynchronous import Event, Queue, sleep
 
 from .triggers import *
 
-from .bundle import Bundle, WriteMode, IOType
+from .bundle import Bundle, WriteMode
 
 from . import logger
 from .logger import get_logger, setup_logging, summary

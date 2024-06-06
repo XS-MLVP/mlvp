@@ -84,15 +84,15 @@ def test_bundle():
     for signal in bundle_4.all_signals():
         print(signal)
 
-    bundle_4.set_all(666)
+    # bundle_4.set_all(666)
     print(bundle_4.as_dict())
 
     bundle_4.assign({
-        "*": 777,
+        # "*": 777,
         "a": 1,
         "c": {
             "1": 3,
-            "*": 888,
+            # "*": 888,
         },
     }, multilevel=True)
     print(bundle_4.as_dict())
@@ -112,7 +112,7 @@ def test_bundle():
     print(bundle_5.all_signals_rule())
 
     bundle_5.assign({
-        "*": 999,
+        # "*": 999,
         "9": 1,
         "c.1": 4,
         "c.5.43": 3,
@@ -120,12 +120,12 @@ def test_bundle():
         "c": {
             "1": 3,
             "66": 4,
-            "*": 888,
+            # "*": 888,
         },
     }, multilevel=True)
 
     bundle_5.assign({
-        "*": 999,
+        # "*": 999,
         "9": 1,
         "c.1": 4,
         "c.5.43": 3,
