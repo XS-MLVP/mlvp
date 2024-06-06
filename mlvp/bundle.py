@@ -656,13 +656,23 @@ class Bundle(MObject):
 
     @staticmethod
     def __get_rule_string(rule_stack, signal):
+        """
+        Get the rule string from the rule stack.
+
+        Args:
+            rule_stack: The stack of rules.
+            signal: The signal to get the rule string.
+
+        Returns:
+            The rule string.
+        """
+
         rule_string = ""
         rule_stack = rule_stack + [signal]
 
         for rule in rule_stack:
             if rule is rule_stack[-1] or rule.__connect_method.method == "prefix":
                 rule_string += rule if rule is rule_stack[-1] else rule.__connect_method.method_value
-                break
             elif rule.__connect_method.method == "dict":
                 dict_string = "|".join([f"{value}" for _, value in rule.__connect_method.method_value.items()])
                 rule_string += f"({dict_string})"
