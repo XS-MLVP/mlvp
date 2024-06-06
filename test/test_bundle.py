@@ -81,6 +81,12 @@ def test_bundle():
 
     bundle_4 = BundleC.from_prefix("io_").set_name("bundle_4").bind(dut)
 
+    for signal in bundle_4.all_signals():
+        print(signal)
+
+    bundle_4.set_all(666)
+    print(bundle_4.as_dict())
+
 
 if __name__ == "__main__":
     test_bundle()

@@ -167,6 +167,10 @@ class Bundle(MObject):
         self.__clock_event = None
         self.__connect_method = PrefixBindMethod("")
 
+        # Set all sub-bundles' name
+        for sub_bundle_name, sub_bundle in self.__all_sub_bundles():
+            sub_bundle.set_name(sub_bundle_name)
+
     def set_name(self, name):
         """
         Set the name of the bundle.
@@ -286,6 +290,17 @@ class Bundle(MObject):
                     signals[f"{sub_bundle_name}.{sub_bundle_signal}"] = value
             return signals
 
+    def set_all(self, value):
+        """
+        Set all signals values to a value.
+
+        Args:
+            value: The value to set.
+        """
+
+        for _, signal in self.all_signals():
+            signal.value = value
+
     def assign(self, dict, multilevel=True):
         """
         Assign all signals values.
@@ -310,6 +325,29 @@ class Bundle(MObject):
                 else:
                     sub_bundle_name, sub_bundle_signal = signal.split(".", 1)
                     getattr(self, sub_bundle_name).assign({sub_bundle_signal: value})
+
+    def detect_connectivity(self, signal_name):
+        """
+        Detect wether a signal name could be connected to this bundle.
+
+        Args:
+            bundle: The bundle to connect.
+            signal_name: The name of the signal to connect.
+
+        Returns:
+            True if the signal name could be connected to the bundle, False otherwise.
+        """
+
+        all_signals = [{
+            "name": signal_name,
+            "org_name": signal_name,
+            "signal": None
+        }]
+
+        all_signals = self.__bind_from_signal_list(all_signals, self.name, [], False, True)
+
+        return len(all_signals) == 0
+
 
     @classmethod
     def from_prefix(cls, prefix=""):
@@ -382,6 +420,19 @@ class Bundle(MObject):
             signals = signal_list
 
         return NewBundle
+
+    def all_signals(self, level_string=""):
+        """
+        Yield all signals of the bundle.
+
+        Returns:
+            A generator of signal names.
+        """
+
+        for signal in self.signals:
+            yield (Bundle.appended_level_string(level_string, signal)), getattr(self, signal)
+        for sub_bundle_name, sub_bundle in self.__all_sub_bundles():
+            yield from sub_bundle.all_signals(Bundle.appended_level_string(level_string, sub_bundle_name))
 
     def add_signal_attr(self, signal_name, signal, info_bundle_name, info_dut_name):
         """
@@ -469,8 +520,22 @@ class Bundle(MObject):
 
     def __bind_from_signal_list(self, all_signals, level_string, rule_stack,
                                 unconnected_signal_access, detection_mode):
+        """
+        Bind the signals to the bundle.
 
-        rule_stack = rule_stack + [(self.__connect_method.method, self.__connect_method.method_value)]
+        Args:
+            all_signals: A list of signals to bind.
+            level_string: The string of the current level.
+            rule_stack: The stack of rules to bind the signals.
+            unconnected_signal_access: Whether unconnected signals could be accessed.
+            detection_mode: Whether the method is in detection mode. if it is, the bundle
+                            will not be connected to the signals.
+
+        Returns:
+            A list of signals that are not matched.
+        """
+
+        rule_stack = rule_stack + [self]
         connected_signals, matching_signals, remain_signals = \
             self.__connect_method.bind(self, all_signals, level_string, detection_mode)
 
@@ -587,17 +652,18 @@ class Bundle(MObject):
     @staticmethod
     def __get_rule_string(rule_stack, signal):
         rule_string = ""
-        rule_stack = rule_stack + [("prefix", signal)]
+        rule_stack = rule_stack + [signal]
 
         for rule in rule_stack:
-            if rule[0] == "dict":
-                dict_string = "|".join([f"{value}" for _, value in rule[1].items()])
+            if rule is rule_stack[-1] or rule.__connect_method.method == "prefix":
+                rule_string += rule if rule is rule_stack[-1] else rule.__connect_method.method_value
+                break
+            elif rule.__connect_method.method == "dict":
+                dict_string = "|".join([f"{value}" for _, value in rule.__connect_method.method_value.items()])
                 rule_string += f"({dict_string})"
                 break
-            elif rule[0] == "prefix":
-                rule_string += f"{rule[1]}"
-            elif rule[0] == "regex":
-                rule_string += f"{rule[1]} -> "
+            elif rule.__connect_method.method == "regex":
+                rule_string += f"{rule.__connect_method.method_value} -> "
             else:
                 raise ValueError(f"rule must be 'dict', 'prefix', or 'regex'")
 
