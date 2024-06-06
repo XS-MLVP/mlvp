@@ -260,6 +260,8 @@ class Bundle(MObject):
             if signal.mIOType != IOType.Output:
                 signal.write_mode = write_mode
 
+        return self
+
     async def step(self, ncycles=1):
         """
         Wait for the clock for ncycles.
@@ -332,13 +334,18 @@ class Bundle(MObject):
 
         Args:
             value: The value to set.
+
+        Returns:
+            The bundle itself.
         """
 
         for _, signal in self.all_signals():
             if signal.mIOType != IOType.Output:
                 signal.value = value
 
-    def assign(self, dict, multilevel=True):
+        return self
+
+    def assign(self, dict, multilevel=True, level_string=""):
         """
         Assign all signals values.
 
@@ -359,14 +366,26 @@ class Bundle(MObject):
                 if signal in self.signals:
                     getattr(self, signal).value = value
                 elif any(subbundle[0]==signal for subbundle in self.__all_sub_bundles()):
-                    getattr(self, signal).assign(value)
+                    getattr(self, signal).assign(value, multilevel, Bundle.appended_level_string(level_string, signal))
+                else:
+                    full_signal_name = Bundle.appended_level_string(level_string, signal)
+                    error(f"assign: signal \"{full_signal_name}\" is not found in bundle")
         else:
             for signal, value in dict.items():
                 if signal in self.signals:
                     getattr(self, signal).value = value
                 else:
-                    sub_bundle_name, sub_bundle_signal = signal.split(".", 1)
-                    getattr(self, sub_bundle_name).assign({sub_bundle_signal: value})
+                    sub_bundle_name = None
+                    if "." in signal:
+                        sub_bundle_name, sub_bundle_signal = signal.split(".", 1)
+
+                    if sub_bundle_name in [sub_bundle[0] for sub_bundle in self.__all_sub_bundles()]:
+                        getattr(self, sub_bundle_name).assign({sub_bundle_signal: value}, multilevel,
+                                                               Bundle.appended_level_string(level_string, sub_bundle_name))
+                    else:
+                        full_signal_name = Bundle.appended_level_string(level_string, signal)
+                        error(f"assign: signal \"{full_signal_name}\" is not found in bundle")
+
 
     def detect_connectivity(self, signal_name):
         """

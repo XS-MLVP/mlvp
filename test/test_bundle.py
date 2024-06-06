@@ -111,6 +111,30 @@ def test_bundle():
 
     print(bundle_5.all_signals_rule())
 
+    bundle_5.assign({
+        "*": 999,
+        "9": 1,
+        "c.1": 4,
+        "c.5.43": 3,
+        "q": 4,
+        "c": {
+            "1": 3,
+            "66": 4,
+            "*": 888,
+        },
+    }, multilevel=True)
+
+    bundle_5.assign({
+        "*": 999,
+        "9": 1,
+        "c.1": 4,
+        "c.5.43": 3,
+        "q": 4,
+        "c": {
+            "1": 3,
+        },
+    }, multilevel=False)
+
 if __name__ == "__main__":
     test_bundle()
 
