@@ -109,8 +109,7 @@ def test_bundle():
             })
     bundle_5 = BundleD.from_prefix("io_").set_name("bundle_5").bind(dut)
 
-
-
+    print(bundle_5.all_signals_rule())
 
 if __name__ == "__main__":
     test_bundle()

@@ -295,7 +295,7 @@ class Bundle(MObject):
                 sub_bundle.set_name(sub_bundle_name)
 
         self.__bind_from_signal_list(list(self.__all_signals(dut)), self.name,
-                                     [], unconnected_signal_access, False, None)
+                                     [], unconnected_signal_access, False, None, None)
         self.bound = True
         return self
 
@@ -386,16 +386,30 @@ class Bundle(MObject):
             "signal": None
         }]
 
-        all_signals = self.__bind_from_signal_list(all_signals, self.name, [], False, True, None)
+        all_signals = self.__bind_from_signal_list(all_signals, self.name, [], False, True, None, None)
 
         return len(all_signals) == 0
 
     def all_signals_rule(self):
-        pass
+        """
+        Get all signals rules in the bundle.
+
+        Returns:
+            A dictionary of all signals rules in the bundle.
+        """
+
+        all_signals_rule = {}
+        self.__bind_from_signal_list([], self.name, [], False, True, None, all_signals_rule)
+        return all_signals_rule
 
     def detect_specific_connectivity(self, signal_name, specific_signal):
         """
         Detects whether a signal name can be connected to a specific signal in the bundle
+
+        Args:
+            signal_name: The name of the signal to connect.
+            specific_signal: The specific signal in this bundle to connect to, format such
+                             as "subbundle1.subbundle2.siganlA"
         """
 
         all_signals = [{
@@ -404,7 +418,7 @@ class Bundle(MObject):
             "signal": None
         }]
 
-        all_signals = self.__bind_from_signal_list(all_signals, "", [], False, True, specific_signal)
+        all_signals = self.__bind_from_signal_list(all_signals, "", [], False, True, specific_signal, None)
 
         return len(all_signals) == 0
 
@@ -578,17 +592,21 @@ class Bundle(MObject):
             sub_bundle.__unbind_all()
 
     def __bind_from_signal_list(self, all_signals, level_string, rule_stack,
-                                unconnected_signal_access, detection_mode, specific_signal):
+                                unconnected_signal_access, detection_mode, specific_signal, all_signals_rule):
         """
         Bind the signals to the bundle.
 
         Args:
             all_signals: A list of signals to bind.
             level_string: The string of the current level.
-            rule_stack: The stack of rules to bind the signals.
+            rule_stack: The stack of rules to bind the signals, this is a list of bundles.
             unconnected_signal_access: Whether unconnected signals could be accessed.
             detection_mode: Whether the method is in detection mode. if it is, the bundle
                             will not be connected to the signals.
+            specific_signal: It is only valid in detection mode. If it is not None, only
+                             the specific signal will be connected.
+            all_signals_rule: It is only valid in detection mode. If it is not None, the
+                              rule of all signals will be stored in this dictionary.
 
         Returns:
             A list of signals that are not matched.
@@ -615,13 +633,19 @@ class Bundle(MObject):
                         connected_signals.append(signal)
                         remain_signals.remove(signal)
 
+            if all_signals_rule is not None:
+                for signal in self.signals:
+                    full_signal_name = Bundle.appended_level_string(level_string, signal)
+                    rule_string = Bundle.__get_rule_string(rule_stack, signal)
+                    all_signals_rule[full_signal_name] = rule_string
+
         # Bind the remain signals to the sub-bundles
         for sub_bundle_name, sub_bundle in self.__all_sub_bundles():
             matching_signals = sub_bundle.__bind_from_signal_list(matching_signals,
                                                                   Bundle.appended_level_string(
                                                                       level_string, sub_bundle_name),
                                                                   rule_stack, unconnected_signal_access,
-                                                                  detection_mode, specific_signal)
+                                                                  detection_mode, specific_signal, all_signals_rule)
             if sub_bundle.__clock_event is not None:
                 self.__clock_event = sub_bundle.__clock_event
 
@@ -643,7 +667,7 @@ class Bundle(MObject):
             "signal": None
         } for key, value in dict.items()]
 
-        unconnected_signals = self.__bind_from_signal_list(signal_list, self.name, [], False, True, None)
+        unconnected_signals = self.__bind_from_signal_list(signal_list, self.name, [], False, True, None, None)
         unconnected_signal_names = [signal["org_name"] for signal in unconnected_signals]
 
         if len(unconnected_signal_names) > 0:
@@ -728,7 +752,7 @@ class Bundle(MObject):
         Get the rule string from the rule stack.
 
         Args:
-            rule_stack: The stack of rules.
+            rule_stack: The stack of rules, this is a list of bundles.
             signal: The signal to get the rule string.
 
         Returns:
@@ -739,8 +763,12 @@ class Bundle(MObject):
         rule_stack = rule_stack + [signal]
 
         for index, rule in enumerate(rule_stack):
+
+            # Prefix
             if rule is rule_stack[-1] or rule.__connect_method.method == "prefix":
                 rule_string += rule if rule is rule_stack[-1] else rule.__connect_method.method_value
+
+            # Dict
             elif rule.__connect_method.method == "dict":
                 relative_signal_name = Bundle.__get_path_from_rule_stack(rule_stack[index:])
                 flitered_dict = rule_stack[index].__filter_signals_in_dict(rule.__connect_method.method_value,
@@ -754,14 +782,28 @@ class Bundle(MObject):
 
                 rule_string += dict_string
                 break
+
+            # Regex
             elif rule.__connect_method.method == "regex":
                 rule_string += f"{rule.__connect_method.method_value} -> "
+
             else:
                 raise ValueError(f"rule must be 'dict', 'prefix', or 'regex'")
 
         return rule_string
 
     def __filter_signals_in_dict(self, dict, could_connected_to):
+        """
+        Filter signals in the dictionary that could be connected to a specific signal.
+
+        Args:
+            dict: The dictionary to filter.
+            could_connected_to: The specific signal to connect to.
+
+        Returns:
+            A dictionary of signals that could be connected to the specific signal.
+        """
+
         filtered_dict = {}
         for key, value in dict.items():
             if self.detect_specific_connectivity(key, could_connected_to):
@@ -770,6 +812,14 @@ class Bundle(MObject):
 
     @staticmethod
     def __get_path_from_rule_stack(rule_stack, signal=""):
+        """
+        Get siganl path from the rule stack.
+
+        Args:
+            rule_stack: The stack of rules, this is a list of bundles.
+            signal: The signal to get the path.
+        """
+
         path = ""
         if signal is not "":
             rule_stack = rule_stack + [signal]
