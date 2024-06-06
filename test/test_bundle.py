@@ -7,7 +7,7 @@ from mlvp import Bundle
 
 class FakePin:
     def __init__(self):
-        self.xdata, self.event, self.value = None, None, None
+        self.xdata, self.event, self.value, self.mIOType = None, None, None, 0
 
 class FakeDUT:
     def __init__(self):
@@ -96,6 +96,21 @@ def test_bundle():
         },
     }, multilevel=True)
     print(bundle_4.as_dict())
+
+    class BundleD(Bundle):
+        signals = ["a", "b"]
+
+        def __init__(self):
+            super().__init__()
+            self.c = Bundle.new_class_from_list(["1", "2", "3", "4"]).from_dict({
+                "1" : "c_1",
+                "2" : "c_2",
+                "4" : "c_4"
+            })
+    bundle_5 = BundleD.from_prefix("io_").set_name("bundle_5").bind(dut)
+
+
+
 
 if __name__ == "__main__":
     test_bundle()
