@@ -148,6 +148,16 @@ class DictBindMethod(BindMethod):
 
         return (connected_signals, matching_signals, remain_signals)
 
+class DummySignal:
+    """
+    A dummy signal class that does nothing. It will return None when accessed,
+    and do nothing when set.
+    """
+
+    def __setattr__(self, __name, __value):
+        pass
+    def __getattribute__(self, __name):
+        return None
 
 class WriteMode(Enum):
     """
@@ -172,8 +182,9 @@ class Bundle(MObject):
         instance method provided by from_dict, from_prefix and from_regex enable easier connections.
         """
 
-        self.name = ""     # The name of the bundle
-        self.bound = False # Whether the bundle is bound to a DUT
+        self.name = ""         # The name of the bundle
+        self.bound = False     # Whether the bundle is bound to a DUT
+        self.write_mode = None # The write mode of the bundle
 
         self.__clock_event = None
         self.__connect_method = PrefixBindMethod("")
@@ -247,8 +258,21 @@ class Bundle(MObject):
             The bundle itself.
         """
 
+        self.write_mode = write_mode
+        self.__set_all_signals_write_mode(write_mode)
+
+        return self
+
+    def __set_all_signals_write_mode(self, write_mode: WriteMode):
+        """
+        Set the write mode of all signals in the bundle.
+
+        Args:
+            write_mode: The write mode to set.
+        """
+
         for _, signal in self.all_signals():
-            if signal.xdata is not None and not signal.IsOutIO():
+            if Bundle.__is_instance_of_xpin(signal) and not signal.IsOutIO():
                 if write_mode == WriteMode.Imme:
                     signal.AsImmWrite()
                 elif write_mode == WriteMode.Rise:
@@ -258,7 +282,35 @@ class Bundle(MObject):
                 else:
                     raise ValueError("write mode must be Imme, Rise, or Fall")
 
-        return self
+    def set_write_mode_as_imme(self):
+        """
+        Set the write mode of the bundle to immediate.
+
+        Returns:
+            The bundle itself.
+        """
+
+        return self.set_write_mode(WriteMode.Imme)
+
+    def set_write_mode_as_rise(self):
+        """
+        Set the write mode of the bundle to rise.
+
+        Returns:
+            The bundle itself.
+        """
+
+        return self.set_write_mode(WriteMode.Rise)
+
+    def set_write_mode_as_fall(self):
+        """
+        Set the write mode of the bundle to fall.
+
+        Returns:
+            The bundle itself.
+        """
+
+        return self.set_write_mode(WriteMode.Fall)
 
     async def step(self, ncycles=1):
         """
@@ -296,7 +348,11 @@ class Bundle(MObject):
 
         self.__bind_from_signal_list(list(self.__all_signals(dut)), self.name,
                                      [], unconnected_signal_access, False, None, None)
+
         self.bound = True
+        if self.write_mode is not None:
+            self.__set_all_signals_write_mode(self.write_mode)
+
         return self
 
     def as_dict(self, multilevel=True):
@@ -338,7 +394,7 @@ class Bundle(MObject):
         """
 
         for _, signal in self.all_signals():
-            if signal.xdata is not None and not signal.IsOutIO():
+            if Bundle.__is_instance_of_xpin(signal) and not signal.IsOutIO():
                 signal.value = value
         return self
 
@@ -519,7 +575,7 @@ class Bundle(MObject):
         """
 
         for signal in self.signals:
-            yield (Bundle.appended_level_string(level_string, signal)), getattr(self, signal)
+            yield (Bundle.appended_level_string(level_string, signal)), getattr(self, signal, None)
         for sub_bundle_name, sub_bundle in self.__all_sub_bundles():
             yield from sub_bundle.all_signals(Bundle.appended_level_string(level_string, sub_bundle_name))
 
@@ -573,17 +629,6 @@ class Bundle(MObject):
             level_string: The string of the current level.
             unconnected_signal_access: Whether unconnected signals could be accessed.
         """
-
-        class DummySignal:
-            """
-            A dummy signal class that does nothing. It will return None when accessed,
-            and do nothing when set.
-            """
-
-            def __setattr__(self, __name, __value):
-                pass
-            def __getattribute__(self, __name):
-                return None
 
         self._dummy_signal = DummySignal()
 
@@ -739,7 +784,8 @@ class Bundle(MObject):
             True if the signal is an instance of XPin, False otherwise.
         """
 
-        return hasattr(signal, "xdata") and hasattr(signal, "event")
+        return signal is not None and not isinstance(signal, DummySignal) \
+                                  and hasattr(signal, "xdata") and hasattr(signal, "event")
 
     @staticmethod
     def __all_signals(dut):
