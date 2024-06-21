@@ -352,6 +352,37 @@ Bundle 提供了一些实用函数，用于方便地对接口进行操作：
 - `assign` 用于将一个字典中的值赋给接口中的信号
 - `Step` 可等待的时钟信号，用于等待若干个时钟周期
 
+### 利用Bundle中的process_requests函数驱动dut
+
+Boundle通过make_requset_response_for绑定dut后，可以通过process_requests函数对dut进行驱动，如下所示：
+
+```python
+# define vars
+# ...
+bundle_a.make_requset_response_for(dut_a)
+ret = bundle_a.process_requests([d1, d2, d3, ....])
+```
+
+函数process_requests接受一个数组，按顺序在每一个cycle对dut进行赋值（第一个cycle赋值d1，第二个赋值d2, ...）。赋值数据为dict类型或者callable类型（如果为callable类型，其返回值需要为dict）。
+如果需要得到赋值时刻dut的io值，可以提过 "\_\_return_bundles__"进行指定(1个或者多个bundle)。例如：
+
+```python
+
+ret = bundle_a.process_requests([{"reset":1},                                             # data1
+                                 {"reset":0, "__return_bundles__": dut.bundle_ready},     # data2
+                                 ])
+
+print(ret) # [{"data": {"ready": 1}, "cycle":1}]                                          # return of data2
+```
+
+其他特定功能key有：
+
+1. **\_\_funcs__**， 可以在data中指定函数（或者函数list），完成赋值后被调用，参数为（cycle， bundle）。
+1. **\_\_condition_func__**，指定条件函数，当其返回为true时才开始赋值，否者在下一个cycle再继续检测，直到条件满足。参数为（cycle，bundle，custom_args=None）。
+1. **\_\_condition_args__**，条件函数自定义参数，（可选）。
+
+*注释：process_requests 适合简单的条件判断驱动，如果需要处理多个条件，建议使用异步模式。
+
 ## 验证实用模块
 
 MLVP 提供了一些验证实用模块，用于方便用户编写验证代码，这些模块被放置在 `mlvp.modules` 中。

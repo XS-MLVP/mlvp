@@ -3,6 +3,8 @@ from enum import Enum
 from .logger import *
 from .triggers import ClockCycles
 from .base import MObject
+from queue import Queue
+from typing import Dict, List, Optional, Union
 
 class BindMethod(MObject):
     """
@@ -188,6 +190,112 @@ class Bundle(MObject):
 
         self.__clock_event = None
         self.__connect_method = PrefixBindMethod("")
+        self.__dut_requests__ = Queue()
+        self.__dut_instance__ = None
+        self.__blocked_request__ = None
+
+    def ___dut_call_on_rise__(self, cycle):
+        """
+        Call the on rise method of target DUT.
+
+        Args:
+            cycle: The cycle of the rise.
+        """
+        request = None
+        if self.__blocked_request__ is not None:
+            if self.__blocked_request__["__condition_func__"](cycle,
+                                                              self,
+                                                              self.__blocked_request__.get("__condition_args__", None)):
+                request = self.__blocked_request__
+                request.pop("__condition_func__", None)
+                request.pop("__condition_args__", None)
+                self.__blocked_request__ = None
+            else:
+                return
+        if request is None:
+            if self.__dut_requests__.empty():
+                return
+            request = self.__dut_requests__.get()
+            if request is None:
+                return
+        if callable(request):
+            data = request(cycle, self)
+            if data is None:
+                return
+            request = data
+        # check condition
+        if "__condition_func__" in request:
+            if not request["__condition_func__"](cycle, self, request.get("__condition_args__", None)):
+                self.__blocked_request__ = request
+                return
+        request.pop("__condition_func__", None)
+        request.pop("__condition_args__", None)
+        # callbacks
+        funcs = request.pop("__funcs__", None)
+        return_bundles = request.pop("__return_bundles__", None)
+        funcreturns = []
+        if not isinstance(funcs, list):
+            funcs = [funcs]
+        self.assign(request)
+        for func in funcs:
+            if callable(func):
+                funcreturns.append(func(cycle, self))
+            else:
+                funcreturns.append(None)
+        if len(funcreturns) == 1:
+            funcreturns = funcreturns[0]
+        # return bundle
+        if return_bundles is None:
+            return
+        if not isinstance(return_bundles, list):
+            return_bundles = [return_bundles]
+        ret_data = []
+        for return_bundle in return_bundles:
+            if isinstance(return_bundle, Bundle):
+                ret_data.append(return_bundle.as_dict())
+        if len(ret_data) == 1:
+            ret_data = ret_data[0]
+        # save return data in request
+        request["__funcs_return_"] = funcreturns
+        request["__return_values__"] = ret_data
+        request["__return_cycles__"] = cycle
+
+    def make_requset_response_for(self, dut):
+        """
+        Make a request response for the dut.
+
+        Args:
+            dut: The dut to make the request response for.
+        """
+        if self.__dut_instance__ is not None:
+            error("The dut instance is already set")
+        dut.StepRis(self.___dut_call_on_rise__)
+        self.__dut_instance__ = dut
+
+    def process_requests(self, request: Optional[Union[Dict, List[Dict]]]):
+        """
+        Process the requests.
+
+        Args:
+            request: The request to process.
+        """
+        for key in ["__condition_func__", "__condition_args__", "__funcs__", "__return_bundles__"]:
+            if hasattr(self, key):
+                error(f"bundule can not with name: {key}")
+        assert self.__dut_requests__.empty(), "The request queue is not empty"
+        if self.__dut_instance__ is None:
+            error("The dut instance is not set, need to call make_requset_response_for first")
+        if not isinstance(request, list):
+            request = [request]
+        for req in request:
+            self.__dut_requests__.put(req)
+        while not self.__dut_requests__.empty():
+            self.__dut_instance__.Step(1)
+        ret = []
+        for req in request:
+            if isinstance(req, dict) and "__return_values__" in req:
+                ret.append({"data": req["__return_values__"], "cycle": req["__return_cycles__"]})
+        return ret
 
     def set_name(self, name):
         """
