@@ -34,8 +34,8 @@ BLUE = "\x1b[34m"
 WHITE = "\x1b[37m"
 
 class MLVPFormatter(logging.Formatter):
-    """Custom formatter for MLVP logs
-    It supports log_id attribute display in the log record
+    """
+    Custom formatter for MLVP logs. It supports log_id attribute display in the log record
     """
 
     def format(self, record):
@@ -91,20 +91,20 @@ def setup_logging(log_level=WARNING, format=default_format, console_display=True
     """
     Setup the logging configuration for MLVP
 
-    Parameters
-    ----------
-    log_level : int
-        The log level for the logger
-    format : str
-        The format of the log message
-    console_display : bool
-        Whether to display logs on the console
-    log_file : str
-        The log file name to write logs, if None, logs are not written to a file
+    Args:
+        log_level: The log level for the logger
+        format: The format of the log message
+        console_display: Whether to display logs on the console
+        log_file: The log file name to write logs, if None, logs are not written to a file
     """
 
     logging.basicConfig(level=log_level, format=format, handlers=[])
     mlvp_logger.setLevel(log_level)
+
+    for handler in mlvp_logger.handlers[:]:
+        mlvp_logger.removeHandler(handler)
+        handler.close()
+
     mlvp_logger.addHandler(stats_handler)
 
     if console_display:
