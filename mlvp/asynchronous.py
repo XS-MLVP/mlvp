@@ -23,39 +23,27 @@ async def tick_clock_ready():
         await asyncio.sleep(0)
         timestamp_old = timestamp
 
-class Event:
+class Event(asyncio.Event):
     def __init__(self):
-        self.event = asyncio.Event()
+        super().__init__()
 
     async def wait(self):
-        await self.event.wait()
+        await super().wait()
         tick_timestamp()
 
-    def set(self):
-        self.event.set()
-
-    def clear(self):
-        self.event.clear()
-
-
-class Queue:
+class Queue(asyncio.Queue):
     def __init__(self):
-        self.queue = asyncio.Queue()
+        super().__init__()
 
-    async def put(self, value):
-        await self.queue.put(value)
+    async def put(self, item):
+        await super().put(item)
         tick_timestamp()
 
     async def get(self):
-        ret = await self.queue.get()
+        ret = await super().get()
         tick_timestamp()
         return ret
 
-    def put_nowait(self, value):
-        self.queue.put_nowait(value)
-
-    def get_nowait(self):
-        return self.queue.get_nowait()
 
 async def sleep(delay: float):
     await asyncio.sleep(delay)
@@ -102,8 +90,21 @@ async def start_clock(dut):
         reg.update_regs()
         await asyncio.sleep(0)
 
-def create_task(func):
-    return asyncio.create_task(func)
 
-def run(func):
-    asyncio.run(func)
+create_task = asyncio.create_task
+run = asyncio.run
+gather = asyncio.gather
+wait = asyncio.wait
+
+
+from .base import MObject
+
+class Component(MObject):
+
+    def __init__(self):
+        create_task(self.main())
+
+
+    async def main(self):
+        pass
+

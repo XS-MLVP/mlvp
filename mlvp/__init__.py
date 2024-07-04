@@ -1,8 +1,11 @@
-from .asynchronous import start_clock, create_task, run
+from .asynchronous import start_clock, create_task, run, gather, wait
 from .asynchronous import delay_func, delay_assign
 from .asynchronous import Event, Queue, sleep
+from .asynchronous import Component
 
 from .triggers import *
+
+from .port import Port
 
 from .bundle import Bundle, WriteMode
 
