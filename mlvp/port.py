@@ -1,6 +1,6 @@
 from enum import Enum
 from .logger import *
-from .asynchronous import Queue, Event, gather, create_task
+from .asynchronous import Event, gather, create_task
 from .base import MObject
 
 
@@ -52,6 +52,8 @@ class PeekableBuffer:
 
 
 class PortCommand(Enum):
+    """An enumeration of port commands."""
+
     AsyncGet = 1
     AsyncPeek = 2
     AsyncPut = 3
@@ -65,15 +67,185 @@ class PortCommand(Enum):
     CanPeek = 11
     CanPut = 12
 
+    def is_async(self):
+        """Whether this command is asynchronous."""
+
+        return self in [PortCommand.AsyncGet, PortCommand.AsyncPeek, PortCommand.AsyncPut]
+
+    def is_single_access(self):
+        """Whether the command can be used to access only one port."""
+
+        return not self.is_async() and not self is PortCommand.SyncPut
+
+    def is_put_method(self):
+        """
+        Whether the command is a put method.
+        It is used to determine whether the command requires a parameter.
+        """
+
+        return self in [PortCommand.AsyncPut, PortCommand.SyncPut, PortCommand.TryPut]
+
+    def match_func_name(self):
+        """Returns the matching function name."""
+
+        return {
+            PortCommand.AsyncGet: "get",
+            PortCommand.AsyncPeek: "peek",
+            PortCommand.AsyncPut: "put",
+            PortCommand.SyncGet: "sync_get",
+            PortCommand.SyncPeek: "sync_peek",
+            PortCommand.SyncPut: "sync_put",
+            PortCommand.TryGet: "try_get",
+            PortCommand.TryPeek: "try_peek",
+            PortCommand.TryPut: "try_put",
+            PortCommand.CanGet: "can_get",
+            PortCommand.CanPeek: "can_peek",
+            PortCommand.CanPut: "can_put",
+        }[self]
 
 class Port(MObject):
+    """A Port is used to interact between different components."""
 
-    def __init__(self):
+    def __init__(self, end_port=True):
+        """
+        Constructs a port.
+
+        Args:
+            end_port: Whether this port is an end port. End port is the port at the
+                      end of the communication.
+        """
+
         self.connected_ports = []
-        self.port_to_get = None
 
+        self.__end_port = end_port
         self.__buffer = PeekableBuffer()
+        self.__func_dict = {}
 
+    def set_sync_get(self, func):
+        """
+        Sets the synchronous get function.
+
+        Args:
+            func: The synchronous get function.
+
+        Returns:
+            The port itself.
+        """
+
+        self.__func_dict[PortCommand.SyncGet] = func
+        return self
+
+    def set_sync_peek(self, func):
+        """
+        Sets the synchronous peek function.
+
+        Args:
+            func: The synchronous peek function.
+
+        Returns:
+            The port itself.
+        """
+
+        self.__func_dict[PortCommand.SyncPeek] = func
+        return self
+
+    def set_sync_put(self, func):
+        """
+        Sets the synchronous put function.
+
+        Args:
+            func: The synchronous put function.
+
+        Returns:
+            The port itself.
+        """
+
+        self.__func_dict[PortCommand.SyncPut] = func
+        return self
+
+    def set_try_get(self, func):
+        """
+        Sets the try get function.
+
+        Args:
+            func: The try get function.
+
+        Returns:
+            The port itself.
+        """
+
+        self.__func_dict[PortCommand.TryGet] = func
+        return self
+
+    def set_try_peek(self, func):
+        """
+        Sets the try peek function.
+
+        Args:
+            func: The try peek function.
+
+        Returns:
+            The port itself.
+        """
+
+        self.__func_dict[PortCommand.TryPeek] = func
+        return self
+
+    def set_try_put(self, func):
+        """
+        Sets the try put function.
+
+        Args:
+            func: The try put function.
+
+        Returns:
+            The port itself.
+        """
+
+        self.__func_dict[PortCommand.TryPut] = func
+        return self
+
+    def set_can_get(self, func):
+        """
+        Sets the can get function.
+
+        Args:
+            func: The can get function.
+
+        Returns:
+            The port itself.
+        """
+
+        self.__func_dict[PortCommand.CanGet] = func
+        return self
+
+    def set_can_peek(self, func):
+        """
+        Sets the can peek function.
+
+        Args:
+            func: The can peek function.
+
+        Returns:
+            The port itself.
+        """
+
+        self.__func_dict[PortCommand.CanPeek] = func
+        return self
+
+    def set_can_put(self, func):
+        """
+        Sets the can put function.
+
+        Args:
+            func: The can put function.
+
+        Returns:
+            The port itself.
+        """
+
+        self.__func_dict[PortCommand.CanPut] = func
+        return self
 
     def connect(self, port: 'Port'):
         """
@@ -88,10 +260,29 @@ class Port(MObject):
 
         assert isinstance(port, Port), "Port must be an instance of Port"
 
-        for (p1, p2) in [(self, port), (port, self)]:
-            p1.connected_ports.append(p2)
-            if p1.port_to_get is None:
-                p1.port_to_get = p2
+        self.connected_ports.append(port)
+        port.connected_ports.append(self)
+
+        return self
+
+    def disconnect(self, port: 'Port'):
+        """
+        Disconnects this port from another port.
+
+        Args:
+            port: The port to disconnect from.
+
+        Returns:
+            The port itself.
+        """
+
+        assert isinstance(port, Port), "Port must be an instance of Port"
+
+        if port not in self.connected_ports:
+            raise Exception("Port is not connected to the port")
+
+        self.connected_ports.remove(port)
+        port.connected_ports.remove(self)
 
         return self
 
@@ -115,34 +306,98 @@ class Port(MObject):
 
         return len(self.connected_ports) > 0
 
+    def __should_process(self):
+        """
+        Returns whether this port should process the item.
+
+        Returns:
+            True if this port should process the item, False otherwise.
+        """
+
+        return self.is_leaf() or self.__end_port
+
     def __send(self, cmd: PortCommand, force_forward=False, item=None, exception=None):
+        """
+        Sends the item based on the command.
+
+        Args:
+            cmd: The command to send.
+            force_forward: Whether to force forward the item. When force_forward is true,
+                           the request is never processed in that port
+            item: The item to send.
+            exception: The exception port to exclude from the send.
+
+        Returns:
+            The result of the command
+        """
+
         if not self.is_connected():
             raise Exception("Port is not connected to any other port")
 
-        if self.is_leaf() and not force_forward:
+        if self.__should_process() and not force_forward:
             return self.__process(item, cmd)
 
-        ret = None
-        for port in self.connected_ports:
-            if port is exception:
-                continue
+        if cmd.is_single_access():
+            if len(self.connected_ports) > 2:
+                print(len(self.connected_ports))
+                raise Exception(f"Multiple paths are found when {cmd} is executed")
 
-            item = port.__send(cmd, False, item, self)
-            if port is self.port_to_get:
-                ret = item
+            port_to_send = self.connected_ports[0]
+            if exception is not None and port_to_send is exception:
+                port_to_send = self.connected_ports[1]
 
-        return ret
+            return port_to_send.__send(cmd, False, item, self)
+
+        else:
+            for port in self.connected_ports:
+                if not port is exception:
+                    port.__send(cmd, False, item, self)
 
     def __process(self, item, cmd: PortCommand):
-        # TODO
-        raise NotImplementedError("Port must implement __process method")
+        """
+        Processes the item based on the command.
+
+        it will call the corresponding function in the function dictionary.
+
+        Args:
+            item: The item to process.
+            cmd: The command to process.
+
+        Returns:
+            The result of the command.
+        """
+
+        if not self.__end_port:
+            warning(f"{cmd.match_func_name()} is called on the non-end port")
+
+        if cmd in self.__func_dict:
+            if cmd.is_put_method():
+                self.__func_dict[cmd](item)
+            else:
+                return self.__func_dict[cmd]()
+        else:
+            raise NotImplementedError(f"{cmd.match_func_name()} is not set")
 
     async def __async_send(self, cmd: PortCommand, force_forward=False, item=None, exception=None):
+        """
+        Sends the item asynchronously based on the command.
+
+        Args:
+            cmd: The command to send.
+            force_forward: Whether to force forward the item. When force_forward is true,
+                           the request is never processed in that port
+            item: The item to send.
+            exception: The exception port to exclude from the send.
+
+        Returns:
+            The result of the command
+        """
+
         if not self.is_connected():
             raise Exception("Port is not connected to any other port")
 
-        if self.is_leaf() and not force_forward:
-            await self.__async_process(item, cmd)
+        if self.__should_process() and not force_forward:
+            return await self.__async_process(item, cmd)
 
         if cmd == PortCommand.AsyncPut:
             all_task = []
@@ -153,19 +408,133 @@ class Port(MObject):
         else:
             raise Exception("Only AsyncPut is supported")
 
-
     async def __async_process(self, item, cmd: PortCommand):
-        await self.__buffer.put(item)
+        """
+        Processes the item asynchronously based on the command.
+
+        Args:
+            item: The item to process.
+            cmd: The command to process.
+
+        Returns:
+            The result of the command.
+        """
+
+        if cmd == PortCommand.AsyncPut:
+            if not self.__end_port:
+                warning("Item has been put into the non-end port")
+
+            await self.__buffer.put(item)
+        else:
+            raise NotImplementedError("Only AsyncPut is supported")
+
+    def sync_get(self):
+        """
+        Synchronous get method.
+
+        Returns:
+            The item from the port.
+        """
+
+        return self.__send(PortCommand.SyncGet, force_forward=True)
+
+    def sync_peek(self):
+        """
+        Synchronous peek method.
+
+        Returns:
+            The item from the port.
+        """
+
+        return self.__send(PortCommand.SyncPeek, force_forward=True)
+
+    def sync_put(self, item):
+        """
+        Synchronous put method.
+
+        Args:
+            item: The item to put into the port.
+        """
+
+        self.__send(PortCommand.SyncPut, force_forward=True, item=item)
 
     def try_get(self):
+        """
+        Try get method.
+
+        Returns:
+            The item from the port.
+        """
+
         return self.__send(PortCommand.TryGet, force_forward=True)
 
+    def try_peek(self):
+        """
+        Try peek method.
+
+        Returns:
+            The item from the port.
+        """
+
+        return self.__send(PortCommand.TryPeek, force_forward=True)
+
+    def try_put(self, item):
+        """
+        Try put method.
+
+        Args:
+            item: The item to put into the port.
+        """
+
+        self.__send(PortCommand.TryPut, force_forward=True, item=item)
+
+    def can_get(self):
+        """
+        Can get method.
+
+        Returns:
+            True if the port can get, False otherwise.
+        """
+
+        return self.__send(PortCommand.CanGet, force_forward=True)
+
+    def can_peek(self):
+        """
+        Can peek method.
+
+        Returns:
+            True if the port can peek, False otherwise.
+        """
+
+        return self.__send(PortCommand.CanPeek, force_forward=True)
+
+    def can_put(self):
+        """
+        Can put method.
+
+        Returns:
+            True if the port can put, False otherwise.
+        """
+
+        return self.__send(PortCommand.CanPut, force_forward=True)
 
     async def get(self):
+        """
+        Asynchronous get method.
+        """
+
         return await self.__buffer.get()
 
     async def peek(self):
+        """
+        Asynchronous peek method.
+        """
+
         return await self.__buffer.peek()
 
     async def put(self, item):
+        """
+        Asynchronous put method.
+        """
+
         await self.__async_send(PortCommand.AsyncPut, force_forward=True, item=item)
