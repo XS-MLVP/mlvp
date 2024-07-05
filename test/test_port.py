@@ -62,6 +62,29 @@ def test_sync():
     print(a.can_peek())
 
 
+def test_single_port():
+    a = Port()
+    a.set_sync_get(lambda: 123456)
+    a.set_sync_put(lambda x: print(f"A: Get {x}"))
+    a.set_sync_peek(lambda: "A sync_peek")
+    a.set_try_get(lambda: "A try_get")
+    a.set_try_put(lambda x: print(f"A: Try put {x}"))
+    a.set_try_peek(lambda: "A try_peek")
+    a.set_can_get(lambda: "A can_get")
+    a.set_can_put(lambda: "A can_put")
+    a.set_can_peek(lambda: "A can_peek")
 
-# test_async()
+    print(a.sync_get())
+    print(a.sync_put(123))
+    print(a.sync_peek())
+    print(a.try_get())
+    print(a.try_put(123))
+    print(a.try_peek())
+    print(a.can_get())
+    print(a.can_put())
+    print(a.can_peek())
+
+
+test_async()
 test_sync()
+test_single_port()

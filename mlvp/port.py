@@ -316,14 +316,13 @@ class Port(MObject):
 
         return self.is_leaf() or self.__end_port
 
-    def __send(self, cmd: PortCommand, force_forward=False, item=None, exception=None):
+    def __send(self, cmd: PortCommand, start_port=False, item=None, exception=None):
         """
         Sends the item based on the command.
 
         Args:
             cmd: The command to send.
-            force_forward: Whether to force forward the item. When force_forward is true,
-                           the request is never processed in that port
+            start_port: Whether the port is the start port.
             item: The item to send.
             exception: The exception port to exclude from the send.
 
@@ -331,15 +330,12 @@ class Port(MObject):
             The result of the command
         """
 
-        if not self.is_connected():
-            raise Exception("Port is not connected to any other port")
-
-        if self.__should_process() and not force_forward:
+        if (self.__should_process() and not start_port) \
+                or (not self.is_connected() and start_port):
             return self.__process(item, cmd)
 
         if cmd.is_single_access():
             if len(self.connected_ports) > 2:
-                print(len(self.connected_ports))
                 raise Exception(f"Multiple paths are found when {cmd} is executed")
 
             port_to_send = self.connected_ports[0]
@@ -378,14 +374,13 @@ class Port(MObject):
         else:
             raise NotImplementedError(f"{cmd.match_func_name()} is not set")
 
-    async def __async_send(self, cmd: PortCommand, force_forward=False, item=None, exception=None):
+    async def __async_send(self, cmd: PortCommand, start_port=False, item=None, exception=None):
         """
         Sends the item asynchronously based on the command.
 
         Args:
             cmd: The command to send.
-            force_forward: Whether to force forward the item. When force_forward is true,
-                           the request is never processed in that port
+            start_port: Whether the port is the start port.
             item: The item to send.
             exception: The exception port to exclude from the send.
 
@@ -393,10 +388,8 @@ class Port(MObject):
             The result of the command
         """
 
-        if not self.is_connected():
-            raise Exception("Port is not connected to any other port")
-
-        if self.__should_process() and not force_forward:
+        if (self.__should_process() and not start_port) \
+                or (not self.is_connected() and start_port):
             return await self.__async_process(item, cmd)
 
         if cmd == PortCommand.AsyncPut:
@@ -436,7 +429,7 @@ class Port(MObject):
             The item from the port.
         """
 
-        return self.__send(PortCommand.SyncGet, force_forward=True)
+        return self.__send(PortCommand.SyncGet, start_port=True)
 
     def sync_peek(self):
         """
@@ -446,7 +439,7 @@ class Port(MObject):
             The item from the port.
         """
 
-        return self.__send(PortCommand.SyncPeek, force_forward=True)
+        return self.__send(PortCommand.SyncPeek, start_port=True)
 
     def sync_put(self, item):
         """
@@ -456,7 +449,7 @@ class Port(MObject):
             item: The item to put into the port.
         """
 
-        self.__send(PortCommand.SyncPut, force_forward=True, item=item)
+        self.__send(PortCommand.SyncPut, start_port=True, item=item)
 
     def try_get(self):
         """
@@ -466,7 +459,7 @@ class Port(MObject):
             The item from the port.
         """
 
-        return self.__send(PortCommand.TryGet, force_forward=True)
+        return self.__send(PortCommand.TryGet, start_port=True)
 
     def try_peek(self):
         """
@@ -476,7 +469,7 @@ class Port(MObject):
             The item from the port.
         """
 
-        return self.__send(PortCommand.TryPeek, force_forward=True)
+        return self.__send(PortCommand.TryPeek, start_port=True)
 
     def try_put(self, item):
         """
@@ -486,7 +479,7 @@ class Port(MObject):
             item: The item to put into the port.
         """
 
-        self.__send(PortCommand.TryPut, force_forward=True, item=item)
+        self.__send(PortCommand.TryPut, start_port=True, item=item)
 
     def can_get(self):
         """
@@ -496,7 +489,7 @@ class Port(MObject):
             True if the port can get, False otherwise.
         """
 
-        return self.__send(PortCommand.CanGet, force_forward=True)
+        return self.__send(PortCommand.CanGet, start_port=True)
 
     def can_peek(self):
         """
@@ -506,7 +499,7 @@ class Port(MObject):
             True if the port can peek, False otherwise.
         """
 
-        return self.__send(PortCommand.CanPeek, force_forward=True)
+        return self.__send(PortCommand.CanPeek, start_port=True)
 
     def can_put(self):
         """
@@ -516,7 +509,7 @@ class Port(MObject):
             True if the port can put, False otherwise.
         """
 
-        return self.__send(PortCommand.CanPut, force_forward=True)
+        return self.__send(PortCommand.CanPut, start_port=True)
 
     async def get(self):
         """
@@ -537,4 +530,4 @@ class Port(MObject):
         Asynchronous put method.
         """
 
-        await self.__async_send(PortCommand.AsyncPut, force_forward=True, item=item)
+        await self.__async_send(PortCommand.AsyncPut, start_port=True, item=item)
