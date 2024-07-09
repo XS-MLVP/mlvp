@@ -106,5 +106,5 @@ class Component(MObject):
 
 
     async def main(self):
-        pass
+        raise NotImplementedError("main function not implemented")
 

@@ -13,6 +13,26 @@ class PeekableBuffer:
         self.buffer = []
         self.item_available = Event()
 
+    def size(self):
+        """
+        Returns the size of the buffer.
+
+        Returns:
+            The size of the buffer.
+        """
+
+        return len(self.buffer)
+
+    def empty(self):
+        """
+        Returns whether the buffer is empty.
+
+        Returns:
+            True if the buffer is empty, False otherwise.
+        """
+
+        return len(self.buffer) == 0
+
     async def put(self, item):
         """
         Puts an item into the buffer.
@@ -305,6 +325,26 @@ class Port(MObject):
         """
 
         return len(self.connected_ports) > 0
+
+    def size(self):
+        """
+        Returns the size of the buffer in the port.
+
+        Returns:
+            The size of the buffer.
+        """
+
+        return self.__buffer.size()
+
+    def empty(self):
+        """
+        Returns whether the buffer is empty.
+
+        Returns:
+            True if the buffer is empty, False otherwise.
+        """
+
+        return self.__buffer.empty()
 
     def __should_process(self):
         """
