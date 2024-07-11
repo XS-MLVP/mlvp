@@ -9,6 +9,7 @@ class MObject(object):
 import subprocess
 import os
 import sys
+import re
 
 
 def exe_cmd(cmd):
@@ -25,15 +26,10 @@ def exe_cmd(cmd):
     return success, stdout, stderr
 
 def parse_lines(text: str):
-    pre_flage = False
-    for line in text.split('\n'):
-        line = line.strip()
-        if line == "Overall coverage rate:":
-            pre_flage = True
-            continue
-        if pre_flage:
-            info = line.split("(")[-1].split(" ")
-            return int(info[0]), int(info[2])
+    pattern = r'lines\.+: \d+\.\d+% \((\d+) of (\d+) lines\)\n'
+    match = re.search(pattern, text)
+    if match:
+        return tuple(map(int, match.groups()))
     return -1, -1
 
 
