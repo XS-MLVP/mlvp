@@ -9,6 +9,9 @@ from .port import Port
 
 from .bundle import Bundle, WriteMode
 
+from .magent import Driver, Monitor
+from .compare import add_comparison
+
 from . import logger
 from .logger import get_logger, setup_logging, summary
 from .logger import log, debug, info, warning, error, critical
