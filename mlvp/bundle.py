@@ -92,7 +92,8 @@ class RegexBindMethod(BindMethod):
         for signal in all_signals:
             match = re.search(regex, signal["name"])
             if match is not None:
-                name = "".join(match.groups())
+                groups = ["" if x is None else x for x in match.groups()]
+                name = "".join(groups)
                 if name in bundle.signals:
                     if not detection_mode:
                         bundle.add_signal_attr(name,

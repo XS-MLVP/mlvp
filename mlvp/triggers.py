@@ -2,6 +2,10 @@ async def Value(pin, value):
     while (pin.value != value):
         await pin.event.wait()
 
+async def AllValid(*pins):
+    while not all(pin.value for pin in pins):
+        await pins[0].event.wait()
+
 async def ClockCycles(item, ncycles = 1):
     if hasattr(item, "event"):
         for _ in range(ncycles):
