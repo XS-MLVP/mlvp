@@ -703,6 +703,11 @@ class Bundle(MObject):
         if self.__clock_event is None:
             self.__clock_event = signal.event
 
+        if hasattr(signal.xdata, "number_of_bundles_connected_to"):
+            signal.xdata.number_of_bundles_connected_to += 1
+        else:
+            signal.xdata.number_of_bundles_connected_to = 1
+
         info(f"dut's signal \"{info_dut_name}\" is connected to \"{info_bundle_name}\"")
 
     def __str__(self):
@@ -750,14 +755,29 @@ class Bundle(MObject):
                 if unconnected_signal_access:
                     setattr(self, signal, self._dummy_signal)
 
+    def __remove_signal_attr(self, signal_name):
+        """
+        Remove a signal attribute from the bundle.
+
+        Args:
+            signal_name: The name of the signal to remove.
+        """
+
+        signal = getattr(self, signal_name)
+        if hasattr(signal.xdata, "number_of_bundles_connected_to"):
+            signal.xdata.number_of_bundles_connected_to -= 1
+            if signal.xdata.number_of_bundles_connected_to == 0:
+                delattr(signal.xdata, "number_of_bundles_connected_to")
+        delattr(self, signal_name)
+
     def __unbind_all(self):
         """
         Unbind all signals to the bundle.
         """
 
-        for signal in self.signals:
-            if hasattr(self, signal):
-                delattr(self, signal)
+        for signal_name in self.signals:
+            if hasattr(self, signal_name):
+                self.__remove_signal_attr(signal_name)
         for _, sub_bundle in self.__all_sub_bundles():
             sub_bundle.__unbind_all()
 
@@ -843,6 +863,48 @@ class Bundle(MObject):
         if len(unconnected_signal_names) > 0:
             warning(f"The signal names {unconnected_signal_names} in {type(self).__name__}'s connection dictionary "
                     "are invalid, because they cannot match any signals from the Bundle")
+
+    @staticmethod
+    def detect_unconnected_signals(dut):
+        """
+        Detect signals that are not connected to any bundle.
+
+        Args:
+            dut: The dut to detect.
+
+        Returns:
+            A list of unconnected signals
+        """
+
+        unconnected_signals = []
+        for signal_info in Bundle.__all_signals(dut):
+            signal = signal_info["signal"]
+            if not hasattr(signal, "number_of_bundles_connected_to") or \
+                signal.number_of_bundles_connected_to == 0:
+                unconnected_signals.append(signal_info["org_name"])
+
+        return unconnected_signals
+
+    @staticmethod
+    def detect_multiple_connections(dut):
+        """
+        Detect signals that are connected to multiple bundles.
+
+        Args:
+            dut: The dut to detect.
+
+        Returns:
+            A list of signals that are connected to multiple bundles.
+        """
+
+        multiple_connections = []
+        for signal_info in Bundle.__all_signals(dut):
+            signal = signal_info["signal"]
+            if hasattr(signal, "number_of_bundles_connected_to") and \
+                signal.number_of_bundles_connected_to > 1:
+                multiple_connections.append(signal_info["org_name"])
+
+        return multiple_connections
 
     @staticmethod
     def appended_level_string(level_string, level):
