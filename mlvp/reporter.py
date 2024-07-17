@@ -58,11 +58,8 @@ def __update_func_coverage__(__func_coverage__):
     bin_num_total = 0
     has_once = False
     def parse_group(g):
-        nonlocal group_num_hints, group_num_total, point_num_hints, point_num_total, bin_num_hints, bin_num_total, has_once
+        nonlocal point_num_hints, point_num_total, bin_num_hints, bin_num_total, has_once
         data = json.loads(g)
-        group_num_total += 1
-        if data["hinted"]:
-            group_num_hints += 1
         if data["has_once"]:
             has_once = True
         point_num_hints += data["point_num_hints"]
@@ -81,6 +78,8 @@ def __update_func_coverage__(__func_coverage__):
                     result[key] += value
                 elif isinstance(result[key], list) and isinstance(value, list):
                     result[key] += value
+                elif isinstance(result[key], bool) and isinstance(value, bool):
+                    result[key] = result[key] and value
                 elif result[key] == value:
                     continue  # Same value, do nothing
                 else:
@@ -98,6 +97,10 @@ def __update_func_coverage__(__func_coverage__):
                 result[d["name"]] = d
         return [v for _, v in result.items()]
     coverage["groups"] = merge_dicts_list([parse_group(g) for g in __func_coverage__])
+    for data in coverage["groups"]:
+        group_num_total += 1
+        if data["hinted"]:
+            group_num_hints += 1
     coverage["group_num_total"] = group_num_total
     coverage["group_num_hints"] = group_num_hints
     coverage["point_num_total"] = point_num_total
