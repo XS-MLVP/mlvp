@@ -1,7 +1,7 @@
 
 import os
 import sys
-from mlvp.reporter import generate_pytest_report, set_line_good_rate, set_meta_info
+from mlvp.reporter import generate_pytest_report, set_line_good_rate, set_meta_info, set_user_info
 
 import mlvp.funcov as fc
 from mlvp.reporter import set_func_coverage
@@ -33,6 +33,7 @@ def test_must_fail():
 def sample_report():
     set_line_good_rate(10)
     set_meta_info("test_key", "test_value")
+    set_user_info("test_user", "USER001122334")
     report = os.path.join(os.path.dirname(os.path.abspath(__file__)), "report/report.html")
     result = generate_pytest_report(report, ["-s", "test"])
     print("sample_report pid: ", os.getpid())
