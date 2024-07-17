@@ -70,7 +70,32 @@ def __update_func_coverage__(__func_coverage__):
         bin_num_hints += data["bin_num_hints"]
         bin_num_total += data["bin_num_total"]
         return data
-    coverage["groups"] = [parse_group(g) for g in __func_coverage__]
+    def merge_dicts(dict1, dict2):
+        """Recursively merge two dictionaries."""
+        result = dict1.copy()  # Start with keys and values of dict1
+        for key, value in dict2.items():
+            if key in result:
+                if isinstance(result[key], dict) and isinstance(value, dict):
+                    result[key] = merge_dicts(result[key], value)
+                elif isinstance(result[key], int) and isinstance(value, int):
+                    result[key] += value
+                elif result[key] == value:
+                    continue  # Same value, do nothing
+                else:
+                    raise ValueError(f"Conflict at key '{key}': {result[key]} vs {value}")
+            else:
+                result[key] = value
+        return result
+    def merge_dicts_list(dicts: list):
+        """Merge a list of dictionaries."""
+        result = {}
+        for d in dicts:
+            if d["name"] in result:
+                result[d["name"]] = merge_dicts(result[d["name"]], d)
+            else:
+                result[d["name"]] = d
+        return [v for _, v in result.items()]
+    coverage["groups"] = merge_dicts_list([parse_group(g) for g in __func_coverage__])
     coverage["group_num_total"] = group_num_total
     coverage["group_num_hints"] = group_num_hints
     coverage["point_num_total"] = point_num_total
