@@ -166,6 +166,31 @@ class CovGroup(object):
                                 "hinted": False, 
                                 "once": self.disable_sample_when_point_hinted if once == None else once}
 
+    def del_point(self, name: str):
+        """
+        delete a point with name
+        @param name: the name of the point
+        """
+        if name not in self.cov_points:
+            raise ValueError("Invalid key %s" % name)
+        del self.cov_points[name]
+
+    def reset_point(self, name: str):
+        """
+        reset a point with name
+        @param name: the name of the point
+        """
+        if name not in self.cov_points:
+            raise ValueError("Invalid key %s" % name)
+        self.cov_points[name]["hints"] = {k: 0 for k in self.cov_points[name]["bins"].keys()}
+        self.cov_points[name]["hinted"] = False
+
+    def clear(self):
+        """
+        clear all points
+        """
+        self.cov_points.clear()
+
     @staticmethod    
     def __check__(points) -> bool:
         hinted = True
