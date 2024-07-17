@@ -160,7 +160,7 @@ def set_func_coverage(request, g):
         g = [g]
     for i in g:
         assert isinstance(i, CovGroup), "g should be an instance of CovGroup or list of CovGroup"
-    request.node.__coverage_group__ = g
+    request.node.__coverage_group__ = [str(x) for x in g]
 
 
 def set_line_coverage(request, datfile):
@@ -174,12 +174,11 @@ def process_func_coverage(item, call, report):
     if hasattr(item, "__coverage_group__"):
         groups = []
         for g in item.__coverage_group__:
-            assert isinstance(g, CovGroup), "item.__coverage_group__ should be an instance of CovGroup"
-            str_func_coverage = str(g)
+            assert isinstance(g, str), "item.__coverage_group__ should be an instance of CovGroup"
             groups.append({
-                "hash": "%s" % hash(str_func_coverage),
+                "hash": "%s" % hash(g),
                 "id": "H%s-P%s" % (uuid.getnode(), os.getpid()),
-                "data": str_func_coverage
+                "data": g
             })
         report.__coverage_group__ = groups
     if hasattr(item, "__line_coverage__"):
