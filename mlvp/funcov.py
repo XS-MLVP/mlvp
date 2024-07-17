@@ -123,8 +123,11 @@ class CovGroup(object):
         self.filename = frame.filename
         self.lineno = frame.lineno
         self.name = name if name else "%s:%s" % (self.filename, self.lineno)
-        self.cov_points = OrderedDict()
         self.disable_sample_when_point_hinted = disable_sample_when_point_hinted
+        self.init()
+
+    def init(self):
+        self.cov_points = OrderedDict()
         self.hinted = False
         self.all_once = False
         self.stop_sample = False
@@ -189,7 +192,7 @@ class CovGroup(object):
         """
         clear all points
         """
-        self.cov_points.clear()
+        self.init()
 
     @staticmethod    
     def __check__(points) -> bool:
