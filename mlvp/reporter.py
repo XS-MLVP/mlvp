@@ -79,6 +79,8 @@ def __update_func_coverage__(__func_coverage__):
                     result[key] = merge_dicts(result[key], value)
                 elif isinstance(result[key], int) and isinstance(value, int):
                     result[key] += value
+                elif isinstance(result[key], list) and isinstance(value, list):
+                    result[key] += value
                 elif result[key] == value:
                     continue  # Same value, do nothing
                 else:
