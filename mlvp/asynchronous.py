@@ -11,14 +11,14 @@ def tick_timestamp():
 
 def has_unwait_task():
     for task in asyncio.all_tasks():
-        if "start_clock" not in task.__repr__() and "wait_for" not in task.__repr__():
+        task_str = task.__str__()
+        if ("start_clock" not in task_str and "wait_for" not in task_str) or ("finished" in task_str):
             return True
     return False
 
 async def tick_clock_ready():
     global timestamp
     timestamp_old = timestamp
-    await asyncio.sleep(0)
     while has_unwait_task() or timestamp_old != timestamp:
         await asyncio.sleep(0)
         timestamp_old = timestamp
@@ -93,8 +93,20 @@ async def start_clock(dut):
 
 create_task = asyncio.create_task
 run = asyncio.run
-gather = asyncio.gather
 wait = asyncio.wait
+
+create_task = asyncio.create_task
+
+async def gather(*tasks):
+    all_tasks = []
+    for task in tasks:
+        all_tasks.append(create_task(task))
+
+    results = []
+    for task in all_tasks:
+        results.append(await task)
+
+    return results
 
 
 from .base import MObject

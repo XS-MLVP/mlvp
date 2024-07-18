@@ -5,8 +5,8 @@ class Comparator(Component):
     def __init__(self, dut_port: Port, std_port: Port, compare=None):
         super().__init__()
 
-        self.dut_port = Port()
-        self.std_port = Port()
+        self.dut_port = Port(max_size=-1)
+        self.std_port = Port(max_size=-1)
         self.dut_port.connect(dut_port)
         self.std_port.connect(std_port)
 
@@ -18,10 +18,9 @@ class Comparator(Component):
             std_item = await self.std_port.get()
 
             if not self.compare(dut_item, std_item):
-                error(f"Mismatch: {dut_item}, {std_item}")
-                break
+                error(f"Mismatch\n----- STDOUT -----\n{std_item}\n----- DUTOUT -----\n{dut_item}\n------------------")
             else:
-                info(f"Match: {dut_item}, {std_item}")
+                info(f"Match\n----- STDOUT -----\n{std_item}\n----- DUTOUT -----\n{dut_item}\n------------------")
 
 
     @staticmethod
@@ -31,7 +30,7 @@ class Comparator(Component):
 all_comp_rules = []
 
 
-def add_comparison(port1: Port, port2: Port):
-    comp = Comparator(port1, port2)
+def add_comparison(dut_port: Port, std_port: Port):
+    comp = Comparator(dut_port, std_port)
     all_comp_rules.append(comp)
     return comp

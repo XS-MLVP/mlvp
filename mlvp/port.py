@@ -9,9 +9,11 @@ class PeekableBuffer:
     An asynchronous buffer containing peek functionality.
     """
 
-    def __init__(self):
+    def __init__(self, max_size):
         self.buffer = []
-        self.item_available = Event()
+        self.max_size = max_size
+        self.full_event = Event()
+        self.empty_event = Event()
 
     def size(self):
         """
@@ -41,8 +43,17 @@ class PeekableBuffer:
             item: The item to put into.
         """
 
-        self.buffer.append(item)
-        self.item_available.set()
+        if self.max_size == 0:
+            self.buffer.append(item)
+            self.empty_event.set()
+            await self.full_event.wait()
+            self.full_event.clear()
+        else:
+            while self.max_size != -1 and self.size() >= self.max_size:
+                await self.full_event.wait()
+                self.full_event.clear()
+            self.buffer.append(item)
+            self.empty_event.set()
 
     async def get(self):
         """
@@ -52,10 +63,18 @@ class PeekableBuffer:
             The item from the buffer
         """
 
-        while not self.buffer:
-            await self.item_available.wait()
-            self.item_available.clear()
-        return self.buffer.pop(0)
+        if self.max_size == 0:
+            await self.empty_event.wait()
+            self.empty_event.clear()
+            item = self.buffer.pop(0)
+            self.full_event.set()
+            return item
+        else:
+            while not self.buffer:
+                await self.empty_event.wait()
+                self.empty_event.clear()
+            self.full_event.set()
+            return self.buffer.pop(0)
 
     async def peek(self):
         """
@@ -126,7 +145,7 @@ class PortCommand(Enum):
 class Port(MObject):
     """A Port is used to interact between different components."""
 
-    def __init__(self, end_port=True):
+    def __init__(self, end_port=True, max_size=0):
         """
         Constructs a port.
 
@@ -138,7 +157,7 @@ class Port(MObject):
         self.connected_ports = []
 
         self.__end_port = end_port
-        self.__buffer = PeekableBuffer()
+        self.__buffer = PeekableBuffer(max_size)
         self.__func_dict = {}
 
     def set_sync_get(self, func):
@@ -436,8 +455,11 @@ class Port(MObject):
             all_task = []
             for port in self.connected_ports:
                 if not port is exception:
-                    all_task.append(create_task(port.__async_send(cmd, False, item, self)))
-            await gather(*all_task)
+                    all_task.append(port.__async_send(cmd, False, item, self))
+            if len(all_task) > 1:
+                await gather(*all_task)
+            else:
+                await all_task[0]
         else:
             raise Exception("Only AsyncPut is supported")
 
