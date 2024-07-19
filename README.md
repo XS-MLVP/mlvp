@@ -5,6 +5,7 @@
 # 目录
 
 - [简介](#简介)
+- [目录](#目录)
 - [安装](#安装)
 - [使用说明](#使用说明)
   - [协程支持](#协程支持)
@@ -20,14 +21,15 @@
   - [日志输出 (logger)](#日志输出-logger)
   - [接口 (Bundle)](#接口-bundle)
     - [定义接口](#定义接口)
-    - [接口实例化 & 连接](#接口实例化--连接)
+    - [接口实例化 \& 连接](#接口实例化--连接)
     - [子接口使用](#子接口使用)
     - [参数](#参数)
     - [实用函数](#实用函数)
+    - [利用Bundle中的process\_requests函数驱动dut](#利用bundle中的process_requests函数驱动dut)
   - [验证实用模块](#验证实用模块)
     - [两比特饱和计数器 （TwoBitsCounter）](#两比特饱和计数器-twobitscounter)
     - [伪 LRU 算法 （PLRU）](#伪-lru-算法-plru)
-    - [64位 随机数生成器 （LFSR_64）](#64位-随机数生成器-LFSR_64)
+    - [64位 随机数生成器 （LFSR\_64）](#64位-随机数生成器-lfsr_64)
 
 
 
@@ -226,7 +228,7 @@ def pytest_runtest_makereport(item, call):
 
 ```python
 # 设置为自动配置，通常情况下有多少个cpu，自动开启
-rp.generate_pytest_report(report, args=["-s", "-n auto"])
+rp.generate_pytest_report(report, args=["-s", "-n=auto"])
 
 # 设置4进程并发执行
 rp.generate_pytest_report(report, args=["-s", "-n 4"])
@@ -437,4 +439,3 @@ random = lfsr.rand
 # 更新生成器的状态
 lfsr.step()
 ```
-
