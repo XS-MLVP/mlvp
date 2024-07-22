@@ -57,27 +57,54 @@ def __update_func_coverage__(__func_coverage__):
     bin_num_hints = 0
     bin_num_total = 0
     has_once = False
+
+    """
+        Data Stucture Hierachy:
+            Dict(CovGroup): list[dict]  |- Points:   list[dict] |- bins:     list[dict]  |-   hints:  int
+                                                                |                        |-   name:   str
+                                                                |- hinted:   boolean
+                                                                |- name:     str   
+                                        |- name:     str
+                                        |- hinted:   boolean
+                                        |- bin_num_total:  int
+                                        |- bin_num_hints:  int
+                                        |- point_num_total:  int
+                                        |- point_num_hints:  int
+                                        |- has_once:  boolean
+    """
+
     def parse_group(g):
         nonlocal point_num_hints, point_num_total, bin_num_hints, bin_num_total, has_once
         data = json.loads(g)
         if data["has_once"]:
             has_once = True
-        point_num_hints += data["point_num_hints"]
-        point_num_total += data["point_num_total"]
-        bin_num_hints += data["bin_num_hints"]
-        bin_num_total += data["bin_num_total"]
         return data
+
     def merge_dicts(dict1, dict2):
         """Recursively merge two dictionaries."""
         result = dict1.copy()  # Start with keys and values of dict1
         for key, value in dict2.items():
+            if key.startswith("__"):
+                continue
             if key in result:
                 if isinstance(result[key], dict) and isinstance(value, dict):
                     result[key] = merge_dicts(result[key], value)
                 elif isinstance(result[key], list) and isinstance(value, list):
-                    result[key] += value
+                    if key == "points" or key == "bins":
+                        old_keys = {a["name"]: i for i, a in enumerate(result[key])}
+                        for data in value:
+                            if data["name"] not in old_keys:
+                                result[key].append(data)
+                            else:
+                                result[key][old_keys[data["name"]]] = merge_dicts(
+                                    result[key][old_keys[data["name"]]],
+                                    data
+                                )
                 elif isinstance(result[key], bool) and isinstance(value, bool):
-                    result[key] = result[key] and value
+                    if key == "has_once":
+                        result[key] = result[key] and value
+                    else:
+                        result[key] = result[key] or value
                 elif isinstance(result[key], int) and isinstance(value, int):
                     result[key] += value
                 elif result[key] == value:
@@ -97,10 +124,36 @@ def __update_func_coverage__(__func_coverage__):
                 result[d["name"]] = d
         return [v for _, v in result.items()]
     coverage["groups"] = merge_dicts_list([parse_group(g) for g in __func_coverage__])
+
+    # Recalculate the groups hinted situation
     for data in coverage["groups"]:
         group_num_total += 1
+
+        # Group Hinted
         if data["hinted"]:
             group_num_hints += 1
+
+        # Point Hinted
+        data["point_num_total"] = len(data["points"])
+        data["point_num_hints"] = 0
+        data["bin_num_total"] = 0
+        data["bin_num_hints"] = 0
+
+        for point in data["points"]:
+            # Bins Hinted
+            data["bin_num_total"] += len(point["bins"])
+            tmp_bin_hints = 0
+            for bin in point["bins"]:
+                data["bin_num_hints"] += bin["hints"] > 0
+                tmp_bin_hints += bin["hints"] > 0
+
+            data["point_num_hints"] += tmp_bin_hints == len(point["bins"])
+
+        point_num_hints += data["point_num_hints"]
+        point_num_total += data["point_num_total"]
+        bin_num_hints += data["bin_num_hints"]
+        bin_num_total += data["bin_num_total"]
+
     coverage["group_num_total"] = group_num_total
     coverage["group_num_hints"] = group_num_hints
     coverage["point_num_total"] = point_num_total
