@@ -507,24 +507,38 @@ class Bundle(MObject):
                 signal.value = value
         return self
 
-    def assign(self, dict, multilevel=True, level_string=""):
+    def assign(self, item, multilevel=True, level_string=""):
         """
         Assign all signals values.
 
         Args:
-            dict: The dictionary to assign the signals. if "*" is in the dictionary,
-                    the value of "*" will be assigned to all signals that are not in the dictionary.
+            item: item can be a dict or an object with a __bundle_assign__ method defined.
+                  When item is a dictionary, if "*" is in the dictionary, the value of "*"
+                  will be assigned to all signals that are not in the dictionary.
+                  Otherwise assign will call the __bundle_assign__ function in item to
+                  complete the assignment to the bundle
             multilevel: When multilevel is true, the subbundle signal values are taken
                         from a secondary dictionary. Otherwise, the dictionary should have
                         only one level, with the sub-bundles separated by dots in keys.
         """
 
-        if "*" in dict:
-            self.set_all(dict["*"])
-            del dict["*"]
+        # Case 1: Item is an object with __bundle_assign__ method
+
+        if not isinstance(item, dict):
+            if hasattr(item, "__bundle_assign__"):
+                item.__bundle_assign__(self)
+            else:
+                critical("assign: item must be a dictionary or an object with __bundle_assign__ method")
+            return
+
+        # Case 2: Item is a dictionary
+
+        if "*" in item:
+            self.set_all(item["*"])
+            del item["*"]
 
         if multilevel:
-            for signal, value in dict.items():
+            for signal, value in item.items():
                 if signal in self.signals:
                     getattr(self, signal).value = value
                 elif any(subbundle[0]==signal for subbundle in self.__all_sub_bundles()):
@@ -533,7 +547,7 @@ class Bundle(MObject):
                     full_signal_name = Bundle.appended_level_string(level_string, signal)
                     error(f"assign: signal \"{full_signal_name}\" is not found in bundle")
         else:
-            for signal, value in dict.items():
+            for signal, value in item.items():
                 if signal in self.signals:
                     getattr(self, signal).value = value
                 else:
