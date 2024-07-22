@@ -91,6 +91,16 @@ def __update_func_coverage__(__func_coverage__):
                     result[key] = merge_dicts(result[key], value)
                 elif isinstance(result[key], list) and isinstance(value, list):
                     if key == "points" or key == "bins":
+                        if key == "points":
+                            bins1 = []
+                            for d in result[key]:
+                                for bin in d["bins"]:
+                                    bins1.append(bin["name"])
+                            bins2 = []
+                            for d in value:
+                                for bin in d["bins"]:
+                                    bins2.append(bin["name"])
+                            assert bins1 == bins2, f"bins in points {dict1['name']} should be same"
                         old_keys = {a["name"]: i for i, a in enumerate(result[key])}
                         for data in value:
                             if data["name"] not in old_keys:
@@ -129,9 +139,7 @@ def __update_func_coverage__(__func_coverage__):
     for data in coverage["groups"]:
         group_num_total += 1
 
-        # Group Hinted
-        if data["hinted"]:
-            group_num_hints += 1
+        data["hinted"] = 1
 
         # Point Hinted
         data["point_num_total"] = len(data["points"])
@@ -148,6 +156,11 @@ def __update_func_coverage__(__func_coverage__):
                 tmp_bin_hints += bin["hints"] > 0
 
             data["point_num_hints"] += tmp_bin_hints == len(point["bins"])
+            data["hinted"] &= tmp_bin_hints == len(point["bins"])
+
+        # Group Hinted
+        if data["hinted"]:
+            group_num_hints += 1
 
         point_num_hints += data["point_num_hints"]
         point_num_total += data["point_num_total"]
