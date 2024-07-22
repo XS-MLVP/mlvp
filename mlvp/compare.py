@@ -2,7 +2,7 @@ from . import Component, Port
 from .logger import *
 
 class Comparator(Component):
-    def __init__(self, dut_port: Port, std_port: Port, compare=None):
+    def __init__(self, dut_port: Port, std_port: Port, compare=None, match_detail=False):
         super().__init__()
 
         self.dut_port = Port(max_size=-1)
@@ -11,6 +11,7 @@ class Comparator(Component):
         self.std_port.connect(std_port)
 
         self.compare = Comparator.__default_compare if compare is None else compare
+        self.match_detail = match_detail
 
     async def main(self):
         while True:
@@ -20,7 +21,10 @@ class Comparator(Component):
             if not self.compare(dut_item, std_item):
                 error(f"Mismatch\n----- STDOUT -----\n{std_item}\n----- DUTOUT -----\n{dut_item}\n------------------")
             else:
-                info(f"Match\n----- STDOUT -----\n{std_item}\n----- DUTOUT -----\n{dut_item}\n------------------")
+                if self.match_detail:
+                    info(f"Match\n----- STDOUT -----\n{std_item}\n----- DUTOUT -----\n{dut_item}\n------------------")
+                else:
+                    info("Match")
 
 
     @staticmethod
@@ -30,7 +34,7 @@ class Comparator(Component):
 all_comp_rules = []
 
 
-def add_comparison(dut_port: Port, std_port: Port):
-    comp = Comparator(dut_port, std_port)
+def add_comparison(dut_port: Port, std_port: Port, compare=None, *, match_detail=False):
+    comp = Comparator(dut_port, std_port, compare, match_detail)
     all_comp_rules.append(comp)
     return comp
