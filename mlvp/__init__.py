@@ -10,6 +10,7 @@ from .port import Port
 from .bundle import Bundle, WriteMode
 
 from .env import *
+from .model import *
 from .magent import Driver, Monitor
 from .compare import add_comparison
 
