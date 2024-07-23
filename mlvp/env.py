@@ -71,6 +71,7 @@ class Env:
         all_tasks = []
         for item in self.drive_queue:
             all_tasks.append(item["func"](self, *item["args"], **item["kwargs"]))
+        self.drive_queue.clear()
         await gather(*all_tasks)
 
         # TODO: Return the result of all tasks
@@ -121,7 +122,6 @@ class Env:
         for attr in dir(self):
             if hasattr(getattr(self, attr), "__is_monitor_decorated__"):
                 yield attr
-
 
 
 
