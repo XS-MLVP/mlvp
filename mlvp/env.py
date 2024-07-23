@@ -232,46 +232,67 @@ def driver_method(*, model_sync=True, imme_ret=True):
 
 
 
+class Monitor:
+    """
+    The Monitor is used to monitor the DUT and compare the output with the reference.
+    """
+
+    def __init__(self, monitor_func, model_compare, keep_monitor, compare_func):
+        self.queue = Queue()
+        self.monitor_func = monitor_func
+        self.model_compare = model_compare
+        self.keep_monitor = keep_monitor
+        self.compare_func = compare_func
+
+        self.env = None
+        self.comparator = None
+        self.monitor_task = None
+
+        self.monitor_func.__is_monitor_decorated__ = True
+
+    def __start(self, env):
+        """
+        Start the monitor.
+
+        Args:
+            env: The environment of DUT.
+        """
+
+        self.env = env
+        self.monitor_task = create_task(self.__monitor_forever())
+
+        model_ports = []
+        for model in env.attached_model:
+            model_ports.append(model.get_monitor_method(self.monitor_func.__name__))
+        self.comparator = Comparator(self.queue, model_ports, compare=self.compare_func)
+
+    def wrapped_func(self):
+        monitor = self
+
+        @functools.wraps(monitor.monitor_func)
+        async def wrapper(self, *args, **kwargs):
+            env = self
+
+            if 'config_env' in kwargs and kwargs['config_env']:
+                monitor.__start(env)
+                return
+
+            return await monitor.monitor_func(env, *args, **kwargs)
+        return wrapper
 
 
+    async def __monitor_forever(self):
+        """Monitor the DUT forever."""
+
+        while True:
+            ret = await self.monitor_func(self.env)
+            if ret is not None:
+                await self.queue.put(ret)
+            await self.env.monitor_step()
 
 
 def monitor_method(*, model_compare=True, keep_monitor=True, compare_func=None):
-    queue = Queue()
-    monitor = None
-    comparator = None
-
-    class Monitor(Component):
-        def __init__(self, env, func):
-            super().__init__()
-            self.env = env
-            self.func = func
-
-        async def main(self):
-            while True:
-                ret = await self.func(self.env)
-                if ret is not None:
-                    await queue.put(ret)
-                await self.env.monitor_step()
-
     def decorator(func):
-        func.__is_monitor_decorated__ = True
-
-        @functools.wraps(func)
-        async def wrapper(self, *args, **kwargs):
-            if 'config_env' in kwargs and kwargs['config_env']:
-                global monitor
-                global comparator
-                monitor = Monitor(self, func)
-
-                model_ports = []
-                for model in self.attached_model:
-                    model_ports.append(model.get_monitor_method(func.__name__))
-                comparator = Comparator(queue, model_ports, compare=compare_func)
-
-                return
-
-            return await func(self, *args, **kwargs)
-
-        return wrapper
+        monitor = Monitor(func, model_compare, keep_monitor, compare_func)
+        return monitor.wrapped_func()
     return decorator
