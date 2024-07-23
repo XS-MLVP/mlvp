@@ -2,6 +2,7 @@ from .asynchronous import Component, Queue
 
 class Model(Component):
     def __init__(self):
+        super().__init__()
         self.attached_env = None
 
     def is_attached(self):

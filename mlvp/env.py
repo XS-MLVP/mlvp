@@ -20,7 +20,8 @@ class Env:
         self.monitor_step = monitor_step
 
         # Env will assign self to all monitor methods
-        for monitor_func in self.__all_monitor_method():
+        for func_name in self.__all_monitor_method():
+            monitor_func = getattr(self, func_name)
             create_task(monitor_func(self, config_env=True))
 
     def attach(self, model):
@@ -99,10 +100,10 @@ class Env:
 
     def __all_driver_method(self):
         """
-        Yields all driver methods in the environment.
+        Yields all driver method names in the environment.
 
         Returns:
-            A generator that yields all driver methods in the environment.
+            A generator that yields all driver method names in the environment.
         """
 
         for attr in dir(self):
@@ -111,10 +112,10 @@ class Env:
 
     def __all_monitor_method(self):
         """
-        Yields all monitor methods in the environment.
+        Yields all monitor method names in the environment.
 
         Returns:
-            A generator that yields all monitor methods in the environment.
+            A generator that yields all monitor method names in the environment.
         """
 
         for attr in dir(self):
@@ -149,8 +150,6 @@ def driver_method(*, model_sync=True, imme_ret=True):
         return wrapper
 
     return decorator
-
-
 
 
 

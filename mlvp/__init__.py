@@ -12,7 +12,6 @@ from .bundle import Bundle, WriteMode
 from .env import *
 from .model import *
 from .magent import Driver, Monitor
-from .compare import add_comparison
 
 from . import logger
 from .logger import get_logger, setup_logging, summary
