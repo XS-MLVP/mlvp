@@ -64,18 +64,41 @@ class Env:
 
         return self
 
-
     async def drive_completed(self):
         """Drive all the tasks in the drive queue."""
 
-        all_tasks = []
+        # Group all tasks by function name
+        all_tasks = {}
         for item in self.drive_queue:
-            all_tasks.append(item["func"](self, *item["args"], **item["kwargs"]))
+            func_name = item["func"].__name__
+            if func_name not in all_tasks:
+                all_tasks[func_name] = []
+            all_tasks[func_name].append(item["func"](self, *item["args"], **item["kwargs"]))
+
+        # Generate all tasks to be executed
+        task_names = []
+        tasks_to_exec = []
+        for func_name, tasks in all_tasks.items():
+            task_names.append(func_name)
+            if len(tasks) == 1:
+                tasks_to_exec.append(tasks[0])
+            else:
+                tasks_to_exec.append(self.__sequential_execution_all(*tasks))
+
+        # Execute all tasks
+        results = await gather(*tasks_to_exec)
         self.drive_queue.clear()
-        await gather(*all_tasks)
 
-        # TODO: Return the result of all tasks
+        return dict(zip(task_names, results))
 
+    @staticmethod
+    async def __sequential_execution_all(*tasks):
+        """Sequentially execute all tasks."""
+
+        results = []
+        for task in tasks:
+            results.append(await task)
+        return results
 
     def __ensure_model_match(self, model):
         """
@@ -123,33 +146,92 @@ class Env:
             if hasattr(getattr(self, attr), "__is_monitor_decorated__"):
                 yield attr
 
+class Driver:
+    """
+    The Driver is used to drive the DUT and forward the driver information to
+    the reference model.
+    """
+
+    def __init__(self, drive_func, model_sync, imme_ret):
+        self.drive_func = drive_func
+        self.model_sync = model_sync
+        self.imme_ret = imme_ret
+
+        self.drive_func.__is_driver_decorated__ = True
+
+    async def __forward_to_model(self, item, models):
+        """
+        Forward the item to the models.
+
+        Args:
+            item: The item to be forwarded.
+            models: The models to be forwarded to.
+        """
+
+        if not self.model_sync:
+            return
+
+        for model in models:
+            target = model.get_driver_method(self.drive_func.__name__)
+            if target is not None:
+                await target.put(item)
+            else:
+                critical(f"Model {model} does not have driver method \
+                            {self.drive_func.__name__}")
+
+    async def __drive_dut(self, env, args_list, kwargs_list):
+        """
+        Drive the DUT.
+
+        Args:
+            args_list: The list of args.
+            kwargs_list: The list of kwargs.
+        """
+
+        if self.imme_ret:
+            env.drive_queue.append({
+                "func": self.drive_func,
+                "args": args_list,
+                "kwargs": kwargs_list
+            })
+        else:
+            await self.drive_func(env, *args_list, **kwargs_list)
+
+    def wrapped_func(self):
+        """
+        Wrap the original driver function.
+
+        Returns:
+            The wrapped driver function.
+        """
+
+        driver = self
+
+        @functools.wraps(self.drive_func)
+        async def wrapper(self, *args, **kwargs):
+            env: Env = self
+
+            await driver.__forward_to_model(args[0], env.attached_model)
+            await driver.__drive_dut(env, args, kwargs)
+        return wrapper
 
 
 def driver_method(*, model_sync=True, imme_ret=True):
+    """
+    Decorator for driver method.
+
+    Args:
+        model_sync: Whether to synchronize the driver method with the model.
+        imme_ret: Whether to return immediately.
+    """
+
     def decorator(func):
-        func.__is_driver_decorated__ = True
-
-        @functools.wraps(func)
-        async def wrapper(self, *args, **kwargs):
-            env = self
-            for model in env.attached_model:
-                target = model.get_driver_method(func.__name__)
-                if target is not None:
-                    await target.put(args[0])
-                else:
-                    critical(f"Model {model} does not have driver method {func.__name__}")
-
-            if imme_ret:
-                self.drive_queue.append({
-                    "func": func,
-                    "args": args,
-                    "kwargs": kwargs
-                })
-            else:
-                await func(self, *args, **kwargs)
-        return wrapper
-
+        driver = Driver(func, model_sync=model_sync, imme_ret=imme_ret)
+        return driver.wrapped_func()
     return decorator
+
+
+
 
 
 
