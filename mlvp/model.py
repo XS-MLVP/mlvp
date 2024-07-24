@@ -18,6 +18,13 @@ class Model(Component):
             return getattr(self, name)
         return None
 
+    def get_driver_func(self, name: str):
+        if hasattr(self, name) and callable(getattr(self, name)):
+            return getattr(self, name)
+        return None
+
+    async def main(self):
+        ...
 
 
 class DriverMethod(Queue):

@@ -1,7 +1,8 @@
 import functools
+import inspect
 from .logger import critical, error, info, warning
 from .model import Model
-from .compare import Comparator
+from .compare import Comparator, compare_once
 from .asynchronous import gather, create_task, Queue, Component
 
 class Env:
@@ -115,8 +116,12 @@ class Env:
             raise ValueError(f"Model {model} is not an instance of Model")
 
         for driver_method in self.__all_driver_method():
-            if not model.get_driver_method(driver_method):
-                raise ValueError(f"Model {model} does not have driver method {driver_method}")
+            if getattr(self, driver_method).__is_match_func__:
+                if not model.get_driver_func(driver_method):
+                    raise ValueError(f"Model {model} does not have driver function {driver_method}")
+            else:
+                if not model.get_driver_method(driver_method):
+                    raise ValueError(f"Model {model} does not have driver method {driver_method}")
 
         for monitor_method in self.__all_monitor_method():
             if not model.get_monitor_method(monitor_method):
@@ -152,50 +157,104 @@ class Driver:
     the reference model.
     """
 
-    def __init__(self, drive_func, model_sync, imme_ret):
+    def __init__(self, drive_func, model_sync, imme_ret, match_func, \
+                  result_compare, compare_method):
         self.drive_func = drive_func
         self.model_sync = model_sync
         self.imme_ret = imme_ret
+        self.match_func = match_func
+        self.result_compare = result_compare
+        self.compare_method = compare_method
 
         self.drive_func.__is_driver_decorated__ = True
+        self.drive_func.__is_match_func__ = match_func
 
-    async def __forward_to_model(self, item, models):
+    async def __drive_single_model(self, model, arg_list, kwarg_list):
+        """
+        Drive a single model.
+
+        Args:
+            model: The model to be driven.
+            arg_list: The list of args.
+            kwarg_list: The list of kwargs.
+
+        Returns:
+            The result of the model.
+        """
+
+        if self.match_func:
+            target = model.get_driver_func(self.drive_func.__name__)
+
+            if target is None:
+                critical(f"Model {model} does not have driver function \
+                            {self.drive_func.__name__}")
+
+            if inspect.iscoroutinefunction(target):
+                result = await target(*arg_list, **kwarg_list)
+            else:
+                result = target(*arg_list, **kwarg_list)
+
+            return result
+        else:
+            target = model.get_driver_method(self.drive_func.__name__)
+            if target is not None:
+                await target.put(arg_list[0])
+            else:
+                critical(f"Model {model} does not have driver method \
+                            {self.drive_func.__name__}")
+
+    async def __forward_to_model(self, models, arg_list, kwarg_list):
         """
         Forward the item to the models.
 
         Args:
-            item: The item to be forwarded.
             models: The models to be forwarded to.
+            arg_list: The list of args.
+            kwarg_list: The list of kwargs.
         """
 
         if not self.model_sync:
             return
 
+        results = []
         for model in models:
-            target = model.get_driver_method(self.drive_func.__name__)
-            if target is not None:
-                await target.put(item)
-            else:
-                critical(f"Model {model} does not have driver method \
-                            {self.drive_func.__name__}")
+            results.append(await self.__drive_single_model(model, arg_list, kwarg_list))
 
-    async def __drive_dut(self, env, args_list, kwargs_list):
+        return results
+
+    async def __drive_dut(self, env, arg_list, kwarg_list):
         """
         Drive the DUT.
 
         Args:
-            args_list: The list of args.
-            kwargs_list: The list of kwargs.
+            arg_list: The list of args.
+            kwarg_list: The list of kwargs.
         """
 
         if self.imme_ret:
             env.drive_queue.append({
                 "func": self.drive_func,
-                "args": args_list,
-                "kwargs": kwargs_list
+                "args": arg_list,
+                "kwargs": kwarg_list
             })
         else:
-            await self.drive_func(env, *args_list, **kwargs_list)
+            return await self.drive_func(env, *arg_list, **kwarg_list)
+
+    def __compare_result(self, dut_result, model_results):
+        """
+        Compare the result of the DUT and the models.
+
+        Args:
+            dut_result: The result of the DUT.
+            model_results: The results of the models.
+        """
+
+        if not self.result_compare:
+            return
+
+        print("Comparing results", dut_result, model_results)
+        for model_result in model_results:
+            compare_once(dut_result, model_result, self.compare_method)
 
     def wrapped_func(self):
         """
@@ -211,12 +270,16 @@ class Driver:
         async def wrapper(self, *args, **kwargs):
             env: Env = self
 
-            await driver.__forward_to_model(args[0], env.attached_model)
+            model_results = await driver.__forward_to_model(env.attached_model, \
+                                                            args, kwargs)
             await driver.__drive_dut(env, args, kwargs)
+
+            # driver.__compare_result(dut_result, model_results)
         return wrapper
 
 
-def driver_method(*, model_sync=True, imme_ret=True):
+def driver_method(*, model_sync=True, imme_ret=True, match_func=False, \
+                  result_compare=False, compare_method=None):
     """
     Decorator for driver method.
 
@@ -226,10 +289,10 @@ def driver_method(*, model_sync=True, imme_ret=True):
     """
 
     def decorator(func):
-        driver = Driver(func, model_sync=model_sync, imme_ret=imme_ret)
+        driver = Driver(func, model_sync, imme_ret, match_func, \
+                        result_compare, compare_method)
         return driver.wrapped_func()
     return decorator
-
 
 
 class Monitor:

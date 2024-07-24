@@ -1,12 +1,30 @@
 from . import Component, Port
 from .logger import *
 
+
+def __default_compare(item1, item2):
+    return item1 == item2
+
+def compare_once(dut_item, std_item, compare=None, match_detail=False):
+    if compare is None:
+        compare = __default_compare
+
+    if not compare(dut_item, std_item):
+        error(f"Mismatch\n----- STDOUT -----\n{std_item}\n----- DUTOUT -----\n{dut_item}\n------------------")
+        return False
+    else:
+        if match_detail:
+            info(f"Match\n----- STDOUT -----\n{std_item}\n----- DUTOUT -----\n{dut_item}\n------------------")
+        else:
+            info("Match")
+        return True
+
 class Comparator(Component):
     def __init__(self, dut_port, model_ports, compare=None, match_detail=False):
         super().__init__()
         self.dut_port = dut_port
         self.model_ports = model_ports
-        self.compare = Comparator.__default_compare if compare is None else compare
+        self.compare = compare
         self.match_detail = match_detail
 
     async def main(self):
@@ -14,16 +32,4 @@ class Comparator(Component):
             dut_item = await self.dut_port.get()
             for port in self.model_ports:
                 std_item = await port.get()
-
-                if not self.compare(dut_item, std_item):
-                    error(f"Mismatch\n----- STDOUT -----\n{std_item}\n----- DUTOUT -----\n{dut_item}\n------------------")
-                else:
-                    if self.match_detail:
-                        info(f"Match\n----- STDOUT -----\n{std_item}\n----- DUTOUT -----\n{dut_item}\n------------------")
-                    else:
-                        info("Match")
-
-    @staticmethod
-    def __default_compare(item1, item2):
-        return item1 == item2
-
+                compare_once(dut_item, std_item, self.compare, self.match_detail)
