@@ -237,11 +237,13 @@ class Monitor:
     The Monitor is used to monitor the DUT and compare the output with the reference.
     """
 
-    def __init__(self, monitor_func, model_compare, keep_monitor, compare_func):
-        self.queue = Queue()
+    def __init__(self, monitor_func, model_compare, auto_monitor, compare_func):
+        self.compare_queue = Queue()
+        self.get_queue = Queue()
+
         self.monitor_func = monitor_func
         self.model_compare = model_compare
-        self.keep_monitor = keep_monitor
+        self.auto_monitor = auto_monitor
         self.compare_func = compare_func
 
         self.env = None
@@ -259,14 +261,24 @@ class Monitor:
         """
 
         self.env = env
-        self.monitor_task = create_task(self.__monitor_forever())
 
-        model_ports = []
-        for model in env.attached_model:
-            model_ports.append(model.get_monitor_method(self.monitor_func.__name__))
-        self.comparator = Comparator(self.queue, model_ports, compare=self.compare_func)
+        if self.auto_monitor:
+            self.monitor_task = create_task(self.__monitor_forever())
+
+        if self.model_compare:
+            model_ports = []
+            for model in env.attached_model:
+                model_ports.append(model.get_monitor_method(self.monitor_func.__name__))
+            self.comparator = Comparator(self.compare_queue, model_ports, compare=self.compare_func)
 
     def wrapped_func(self):
+        """
+        Wrap the original monitor function.
+
+        Returns:
+            The wrapped monitor function.
+        """
+
         monitor = self
 
         @functools.wraps(monitor.monitor_func)
@@ -277,9 +289,13 @@ class Monitor:
                 monitor.__start(env)
                 return
 
-            return await monitor.monitor_func(env, *args, **kwargs)
+            if monitor.auto_monitor:
+                return await monitor.get_queue.get()
+            else:
+                item = await monitor.monitor_func(env, *args, **kwargs)
+                await monitor.compare_queue.put(item)
+                return item
         return wrapper
-
 
     async def __monitor_forever(self):
         """Monitor the DUT forever."""
@@ -287,12 +303,27 @@ class Monitor:
         while True:
             ret = await self.monitor_func(self.env)
             if ret is not None:
-                await self.queue.put(ret)
+                await self.get_queue.put(ret)
+                await self.compare_queue.put(ret)
             await self.env.monitor_step()
 
 
-def monitor_method(*, model_compare=True, keep_monitor=True, compare_func=None):
+def monitor_method(*, model_compare=True, auto_monitor=True, compare_func=None):
+    """
+    Decorator for monitor method.
+
+    Args:
+        model_compare: Whether to compare the output with the reference.
+        auto_monitor: Whether to monitor automatically. If True, the monitor will
+                      monitor the DUT forever in the background.
+        compare_func: The function to implement the comparison. If it is None, the default
+                      comparison function will be used.
+
+    Returns:
+        The decorator for monitor method.
+    """
+
     def decorator(func):
-        monitor = Monitor(func, model_compare, keep_monitor, compare_func)
+        monitor = Monitor(func, model_compare, auto_monitor, compare_func)
         return monitor.wrapped_func()
     return decorator
