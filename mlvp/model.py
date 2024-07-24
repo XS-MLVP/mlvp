@@ -19,7 +19,8 @@ class Model(Component):
         return None
 
     def get_driver_func(self, name: str):
-        if hasattr(self, name) and callable(getattr(self, name)):
+        if hasattr(self, name) and callable(getattr(self, name)) and \
+            not isinstance(getattr(self, name), DriverMethod):
             return getattr(self, name)
         return None
 
