@@ -105,9 +105,9 @@ class Env:
                 tasks_to_exec.append(tasks[0][1])
                 task_indexes.append([tasks[0][0]])
             else:
-                tasks = [item[1] for item in tasks]
+                coroutines = [item[1] for item in tasks]
                 task_indexes.append([item[0] for item in tasks])
-                tasks_to_exec.append(self.__sequential_execution_all(*tasks))
+                tasks_to_exec.append(self.__sequential_execution_all(*coroutines))
 
         # Execute all tasks
         results = await gather(*tasks_to_exec)
@@ -294,7 +294,6 @@ class Driver:
         if not self.result_compare:
             return
 
-        print("Comparing results", dut_result, model_results)
         for model_result in model_results:
             compare_once(dut_result, model_result, self.compare_method)
 
@@ -399,7 +398,7 @@ class Monitor:
             model_ports = []
             for model in env.attached_model:
                 model_ports.append(model.get_monitor_method(self.monitor_func.__name__))
-            self.comparator = Comparator(self.compare_queue, model_ports, compare=self.compare_func)
+            self.comparator = Comparator(self.compare_queue, model_ports, compare=self.compare_func, match_detail=True)
 
     def wrapped_func(self):
         """
