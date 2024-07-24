@@ -65,32 +65,81 @@ class Env:
 
         return self
 
-    async def drive_completed(self):
-        """Drive all the tasks in the drive queue."""
+    async def __get_model_results(self):
+        """
+        Get the results from the models.
+        It will add the results to the drive queue with the key "model_results".
+        """
+
+        for item in self.drive_queue:
+            driver: Driver = item["driver"]
+
+            results = await driver.forward_to_models(self.attached_model, \
+                                                     item["args"], item["kwargs"])
+            item["model_results"] = results
+
+    async def __get_dut_results(self):
+        """
+        Get the results from the DUT.
+        It will add the results to the drive queue with the key "dut_result".
+        """
 
         # Group all tasks by function name
         all_tasks = {}
-        for item in self.drive_queue:
-            func_name = item["func"].__name__
+        for index, item in enumerate(self.drive_queue):
+            func = item["driver"].drive_func
+            func_name = func.__name__
+
             if func_name not in all_tasks:
                 all_tasks[func_name] = []
-            all_tasks[func_name].append(item["func"](self, *item["args"], **item["kwargs"]))
+
+            all_tasks[func_name].append((index, func(self, *item["args"], **item["kwargs"])))
 
         # Generate all tasks to be executed
         task_names = []
+        task_indexes = []
         tasks_to_exec = []
         for func_name, tasks in all_tasks.items():
             task_names.append(func_name)
             if len(tasks) == 1:
-                tasks_to_exec.append(tasks[0])
+                tasks_to_exec.append(tasks[0][1])
+                task_indexes.append([tasks[0][0]])
             else:
+                tasks = [item[1] for item in tasks]
+                task_indexes.append([item[0] for item in tasks])
                 tasks_to_exec.append(self.__sequential_execution_all(*tasks))
 
         # Execute all tasks
         results = await gather(*tasks_to_exec)
-        self.drive_queue.clear()
+
+        # Add the results to the drive queue
+        for func_results, indexes in zip(results, task_indexes):
+            if not isinstance(func_results, list):
+                func_results = [func_results]
+
+            for index, result in zip(indexes, func_results):
+                print(index, result)
+                self.drive_queue[index]["dut_result"] = result
 
         return dict(zip(task_names, results))
+
+    def __compare_results(self):
+        """Compare the results of the DUT and the models."""
+
+        for item in self.drive_queue:
+            driver: Driver = item["driver"]
+            if driver.result_compare:
+                driver.compare_results(item["dut_result"], item["model_results"])
+
+    async def drive_completed(self):
+        """Drive all the tasks in the drive queue."""
+
+        await self.__get_model_results()
+        dut_result = await self.__get_dut_results()
+        self.__compare_results()
+        self.drive_queue.clear()
+
+        return dut_result
 
     @staticmethod
     async def __sequential_execution_all(*tasks):
@@ -203,7 +252,7 @@ class Driver:
                 critical(f"Model {model} does not have driver method \
                             {self.drive_func.__name__}")
 
-    async def __forward_to_model(self, models, arg_list, kwarg_list):
+    async def forward_to_models(self, models, arg_list, kwarg_list):
         """
         Forward the item to the models.
 
@@ -222,25 +271,7 @@ class Driver:
 
         return results
 
-    async def __drive_dut(self, env, arg_list, kwarg_list):
-        """
-        Drive the DUT.
-
-        Args:
-            arg_list: The list of args.
-            kwarg_list: The list of kwargs.
-        """
-
-        if self.imme_ret:
-            env.drive_queue.append({
-                "func": self.drive_func,
-                "args": arg_list,
-                "kwargs": kwarg_list
-            })
-        else:
-            return await self.drive_func(env, *arg_list, **kwarg_list)
-
-    def __compare_result(self, dut_result, model_results):
+    def compare_results(self, dut_result, model_results):
         """
         Compare the result of the DUT and the models.
 
@@ -256,6 +287,35 @@ class Driver:
         for model_result in model_results:
             compare_once(dut_result, model_result, self.compare_method)
 
+    async def __process_driver_call(self, env, arg_list, kwarg_list):
+        """
+        Process the driver call.
+
+        Args:
+            env: The environment of DUT.
+            arg_list: The list of args.
+            kwarg_list: The list of kwargs.
+
+        Returns:
+            The result of the DUT if imme_ret is False, otherwise None.
+        """
+
+        if self.imme_ret:
+            env.drive_queue.append({
+                "driver": self,
+                "args": arg_list,
+                "kwargs": kwarg_list
+            })
+
+        else:
+            model_results = await self.forward_to_models(env.attached_model, \
+                                                            arg_list, kwarg_list)
+            dut_result = await self.drive_func(env, *arg_list, **kwarg_list)
+
+            if self.result_compare:
+                self.compare_results(dut_result, model_results)
+            return dut_result
+
     def wrapped_func(self):
         """
         Wrap the original driver function.
@@ -269,12 +329,7 @@ class Driver:
         @functools.wraps(self.drive_func)
         async def wrapper(self, *args, **kwargs):
             env: Env = self
-
-            model_results = await driver.__forward_to_model(env.attached_model, \
-                                                            args, kwargs)
-            await driver.__drive_dut(env, args, kwargs)
-
-            # driver.__compare_result(dut_result, model_results)
+            return await driver.__process_driver_call(env, args, kwargs)
         return wrapper
 
 
