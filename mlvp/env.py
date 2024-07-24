@@ -165,6 +165,9 @@ class Env:
             raise ValueError(f"Model {model} is not an instance of Model")
 
         for driver_method in self.__all_driver_method():
+            if not getattr(self, driver_method).__is_model_sync__:
+                continue
+
             if getattr(self, driver_method).__is_match_func__:
                 if not model.get_driver_func(driver_method):
                     raise ValueError(f"Model {model} does not have driver function {driver_method}")
@@ -173,6 +176,9 @@ class Env:
                     raise ValueError(f"Model {model} does not have driver method {driver_method}")
 
         for monitor_method in self.__all_monitor_method():
+            if not getattr(self, monitor_method).__is_model_compare__:
+                continue
+
             if not model.get_monitor_method(monitor_method):
                 raise ValueError(f"Model {model} does not have monitor method {monitor_method}")
 
@@ -211,12 +217,18 @@ class Driver:
         self.drive_func = drive_func
         self.model_sync = model_sync
         self.imme_ret = imme_ret
+
         self.match_func = match_func
         self.result_compare = result_compare
         self.compare_method = compare_method
 
+        assert model_sync or not result_compare, "result_compare can be true only if model_sync is true"
+        assert match_func or not result_compare, "result_compare can be true only if match_func is true"
+        assert result_compare or compare_method is None, "compare_method takes effect only if result_compare is true"
+
         self.drive_func.__is_driver_decorated__ = True
         self.drive_func.__is_match_func__ = match_func
+        self.drive_func.__is_model_sync__ = model_sync
 
     async def __drive_single_model(self, model, arg_list, kwarg_list):
         """
@@ -369,6 +381,7 @@ class Monitor:
         self.monitor_task = None
 
         self.monitor_func.__is_monitor_decorated__ = True
+        self.monitor_func.__is_model_compare__ = model_compare
 
     def __start(self, env):
         """
