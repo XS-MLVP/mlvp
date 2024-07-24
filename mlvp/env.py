@@ -118,7 +118,6 @@ class Env:
                 func_results = [func_results]
 
             for index, result in zip(indexes, func_results):
-                print(index, result)
                 self.drive_queue[index]["dut_result"] = result
 
         return dict(zip(task_names, results))
