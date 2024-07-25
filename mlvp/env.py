@@ -229,6 +229,25 @@ class Driver:
         self.drive_func.__is_match_func__ = match_func
         self.drive_func.__is_model_sync__ = model_sync
 
+    def __get_args_dict(self, arg_list, kwarg_list):
+        """
+        Get the args and kwargs in the form of dictionary.
+
+        Args:
+            arg_list: The list of args.
+            kwarg_list: The list of kwargs.
+
+        Returns:
+            The args and kwargs in the form of dictionary.
+        """
+
+        signature = inspect.signature(self.drive_func)
+        bound_args = signature.bind(None, *arg_list, **kwarg_list)
+        bound_args.apply_defaults()
+        arguments = bound_args.arguments
+        del arguments["self"]
+        return arguments
+
     async def __drive_single_model(self, model, arg_list, kwarg_list):
         """
         Drive a single model.
@@ -258,7 +277,9 @@ class Driver:
         else:
             target = model.get_driver_method(self.drive_func.__name__)
             if target is not None:
-                await target.put(arg_list[0])
+                args_dict = self.__get_args_dict(arg_list, kwarg_list)
+                args = next(iter(args_dict.values())) if len(args_dict) == 1 else args_dict
+                await target.put(args)
             else:
                 critical(f"Model {model} does not have driver method \
                             {self.drive_func.__name__}")
