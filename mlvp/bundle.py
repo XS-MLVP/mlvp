@@ -455,7 +455,7 @@ class Bundle(MObject):
             for sub_bundle_name, sub_bundle in self.__all_sub_bundles():
                 sub_bundle.set_name(sub_bundle_name)
 
-        self.__bind_from_signal_list(list(self.__all_signals(dut)), self.name,
+        self.__bind_from_signal_list(list(self.dut_all_signals(dut)), self.name,
                                      [], unconnected_signal_access, False, None, None)
 
         self.bound = True
@@ -891,7 +891,7 @@ class Bundle(MObject):
         """
 
         unconnected_signals = []
-        for signal_info in Bundle.__all_signals(dut):
+        for signal_info in Bundle.dut_all_signals(dut):
             signal = signal_info["signal"]
             if not hasattr(signal, "number_of_bundles_connected_to") or \
                 signal.number_of_bundles_connected_to == 0:
@@ -912,7 +912,7 @@ class Bundle(MObject):
         """
 
         multiple_connections = []
-        for signal_info in Bundle.__all_signals(dut):
+        for signal_info in Bundle.dut_all_signals(dut):
             signal = signal_info["signal"]
             if hasattr(signal, "number_of_bundles_connected_to") and \
                 signal.number_of_bundles_connected_to > 1:
@@ -973,7 +973,7 @@ class Bundle(MObject):
                                   and hasattr(signal, "xdata") and hasattr(signal, "event")
 
     @staticmethod
-    def __all_signals(dut):
+    def dut_all_signals(dut):
         """
         Yield all signals of the dut.
 

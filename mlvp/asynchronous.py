@@ -1,4 +1,6 @@
+import sys
 import asyncio
+from .bundle import Bundle
 from . import reg
 
 
@@ -90,10 +92,26 @@ async def start_clock(dut):
         reg.update_regs()
         await asyncio.sleep(0)
 
+def set_clock_event(dut, loop):
+    new_event = asyncio.Event(loop=loop)
+    dut.xclock._step_event = new_event
+    dut.event = new_event
 
-create_task = asyncio.create_task
-run = asyncio.run
-wait = asyncio.wait
+    for xpin_info in Bundle.dut_all_signals(dut):
+        xpin = xpin_info["signal"]
+        xpin.event = new_event
+        print(xpin.event, new_event)
+
+def run(coro, dut=None):
+    if sys.version_info >= (3, 10, 1):
+        return asyncio.run(coro)
+
+    assert dut is not None, "Your current version of python is less than 3.10.1, need to provide the dut parameter"
+
+    loop = asyncio.get_event_loop()
+    set_clock_event(dut, loop)
+    result = loop.run_until_complete(coro)
+    return result
 
 create_task = asyncio.create_task
 
