@@ -200,6 +200,9 @@ def set_user_info(name, code):
     global __report_info__
     __report_info__["user"] = {"name": name, "code": code}
 
+def set_title_info(title):
+    global __report_info__
+    __report_info__["title"] = title
 
 def set_meta_info(key, value, is_del=False):
     global __report_info__
