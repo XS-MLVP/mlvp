@@ -1,7 +1,6 @@
 import re
 from enum import Enum
 from .logger import *
-from .triggers import ClockCycles
 from .base import MObject
 from queue import Queue
 from typing import Dict, List, Optional, Union
@@ -433,7 +432,8 @@ class Bundle(MObject):
         if self.__clock_event is None:
             critical("cannot use step in bundle without a connected signal")
 
-        await ClockCycles(self.__clock_event, ncycles)
+        for _ in range(ncycles):
+            await self.__clock_event.wait()
 
     def bind(self, dut, unconnected_signal_access=True):
         """
@@ -1165,7 +1165,9 @@ class OldBundle:
         """Wait for the clock for ncycles"""
 
         assert self.clock_event is not None, "bundle must have one connected signal"
-        await ClockCycles(self.clock_event, ncycles)
+
+        for _ in range(ncycles):
+            await self.clock_event.wait()
 
     def collect(self):
         """Collect all signals values"""
