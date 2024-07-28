@@ -48,64 +48,59 @@ class ModelFirstScheduler(MsgScheduler):
             results = await driver.forward_to_models(self.models, item["args"], item["kwargs"])
             item["model_results"] = results
 
+    async def __wrapped_coro(self, coro, queue_item):
+        """
+        Wrap the coro so that it can compare with the model results after the DUT is driven.
+        """
+
+        queue_item["dut_result"] = await coro
+
+        driver = queue_item["driver"]
+        if driver.result_compare:
+            driver.compare_results(queue_item["dut_result"], queue_item["model_results"])
+
     async def __get_dut_results(self):
         """
-        Get the results from the DUT.
-        It will add the results to the drive queue with the key "dut_result".
+        Get the results from the DUT and compare them with the model results.
         """
 
         # Group all tasks by sche_group
         all_tasks = {}
-        for index, item in enumerate(self.queue):
+        for item in self.queue:
             func = item["driver"].func
             sche_group = item["sche_group"]
 
             if sche_group not in all_tasks:
                 all_tasks[sche_group] = []
 
-            all_tasks[sche_group].append((index, func(self.env, *item["args"], **item["kwargs"])))
+            all_tasks[sche_group].append(self.__wrapped_coro(func(self.env, *item["args"], **item["kwargs"]), item))
 
         # Generate all tasks to be executed
         sche_groups = []
-        task_indexes = []
-        tasks_to_exec = []
         for sche_group, tasks in all_tasks.items():
-            sche_groups.append(sche_group)
             if len(tasks) == 1:
-                tasks_to_exec.append(tasks[0][1])
-                task_indexes.append([tasks[0][0]])
+                sche_groups.append(tasks[0])
             else:
-                coroutines = [item[1] for item in tasks]
-                task_indexes.append([item[0] for item in tasks])
-                tasks_to_exec.append(self.sequential_execution_all(*coroutines))
+                sche_groups.append(self.sequential_execution_all(*tasks))
 
         # Execute all tasks
-        results = await gather(*tasks_to_exec)
-
-        # Add the results to the drive queue
-        for func_results, indexes in zip(results, task_indexes):
-            if not isinstance(func_results, list):
-                func_results = [func_results]
-
-            for index, result in zip(indexes, func_results):
-                self.queue[index]["dut_result"] = result
-
-        return dict(zip(sche_groups, results))
-
-    def __compare_results(self):
-        """Compare the results of the DUT and the models."""
-
-        for item in self.queue:
-            driver: Driver = item["driver"]
-            if driver.result_compare:
-                driver.compare_results(item["dut_result"], item["model_results"])
+        await gather(*sche_groups)
 
     async def schedule(self):
         await self.__get_model_results()
-        dut_result = await self.__get_dut_results()
-        self.__compare_results()
+        await self.__get_dut_results()
 
-        return dut_result
+        results = {}
+        for item in self.queue:
+            if item["sche_group"] not in results:
+                results[item["sche_group"]] = []
+            results[item["sche_group"]].append(item["dut_result"])
+
+        for key in results:
+            if len(results[key]) == 1:
+                results[key] = results[key][0]
+
+        return results
 
 class BeforeModelScheduler(MsgScheduler):
     """
