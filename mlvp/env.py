@@ -110,7 +110,7 @@ class BeforeModelScheduler(MsgScheduler):
     forwarded to all models.
     """
 
-    async def __forward_to_models(self, queue_item):
+    async def forward_to_models(self, queue_item):
         """
         Forward the item to the models and add the results to queue_item.
         """
@@ -119,14 +119,14 @@ class BeforeModelScheduler(MsgScheduler):
         results = await driver.forward_to_models(self.models, queue_item["args"], queue_item["kwargs"])
         queue_item["model_results"] = results
 
-    async def __wrapped_coro(self, coro, queue_item):
+    async def wrapped_coro(self, coro, queue_item):
         """
         Wrap the coro so that it can forward the item to the models before it is executed. After both the model and the
         DUT are driven, the results will be compared.
         """
 
         queue_item["dut_result"] = await coro
-        await self.__forward_to_models(queue_item)
+        await self.forward_to_models(queue_item)
 
         driver = queue_item["driver"]
         if driver.result_compare:
@@ -146,7 +146,7 @@ class BeforeModelScheduler(MsgScheduler):
             if sche_group not in all_tasks:
                 all_tasks[sche_group] = []
 
-            all_tasks[sche_group].append(self.__wrapped_coro(func(self.env, *item["args"], **item["kwargs"]), item))
+            all_tasks[sche_group].append(self.wrapped_coro(func(self.env, *item["args"], **item["kwargs"]), item))
 
         # Generate all tasks to be executed
         sche_groups = []
@@ -173,6 +173,27 @@ class BeforeModelScheduler(MsgScheduler):
                 results[key] = results[key][0]
 
         return results
+
+class AfterModelScheduler(BeforeModelScheduler):
+    """
+    The After model message scheduler.
+
+    Msg will be executed after it is sent to the Model. Specifically, when an Msg is forwarded to the model, it is
+    immediately executed.
+    """
+
+    async def wrapped_coro(self, coro, queue_item):
+        """
+        Wrap the coro so that it can forward the item to the models before it is executed. After both the model and the
+        DUT are driven, the results will be compared.
+        """
+
+        await self.forward_to_models(queue_item)
+        queue_item["dut_result"] = await coro
+
+        driver = queue_item["driver"]
+        if driver.result_compare:
+            driver.compare_results(queue_item["dut_result"], queue_item["model_results"])
 
 class Env:
     """Provides an environment for operation on the DUT."""
@@ -232,8 +253,6 @@ class Env:
             error(f"Model {model} is not attached to the environment")
 
         return self
-
-
 
     def __ensure_model_match(self, model):
         """
@@ -298,6 +317,8 @@ class Env:
             result = await ModelFirstScheduler(self, self.drive_queue, self.attached_model).schedule()
         elif sche_method == "before_model":
             result = await BeforeModelScheduler(self, self.drive_queue, self.attached_model).schedule()
+        elif sche_method == "after_model":
+            result = await AfterModelScheduler(self, self.drive_queue, self.attached_model).schedule()
         else:
             raise ValueError(f"Invalid sche_method {sche_method}")
 
