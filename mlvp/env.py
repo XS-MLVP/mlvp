@@ -3,6 +3,112 @@ from .model import Model
 from .asynchronous import gather, create_task
 from .agent import Monitor, Driver
 
+class MsgScheduler:
+    """The message scheduler."""
+
+    def __init__(self, queue: list, models: list):
+        self.queue = queue
+        self.models = models
+
+    async def schedule(self):
+        """
+        Message execution in the queue is scheduled and forwarded to the model.
+
+        Returns:
+            The results of all schedule groups.
+        """
+
+        raise NotImplementedError("The method sche is not implemented")
+
+    @staticmethod
+    async def __sequential_execution_all(*tasks):
+        """Sequentially execute all tasks."""
+
+        results = []
+        for task in tasks:
+            results.append(await task)
+        return results
+
+class ModelFirstScheduler(MsgScheduler):
+    """
+    The model first message scheduler. Before actually driving the DUT, the scheduler forwards the message to all the
+    reference models in order.
+    """
+
+    async def __get_model_results(self):
+        """
+        Get the results from the models.
+        It will add the results to the drive queue with the key "model_results".
+        """
+
+        for item in self.queue:
+            driver: Driver = item["driver"]
+
+            results = await driver.forward_to_models(self.models, item["args"], item["kwargs"])
+            item["model_results"] = results
+
+    async def __get_dut_results(self):
+        """
+        Get the results from the DUT.
+        It will add the results to the drive queue with the key "dut_result".
+        """
+
+        # Group all tasks by function name
+        all_tasks = {}
+        for index, item in enumerate(self.queue):
+            func = item["driver"].drive_func
+            func_name = func.__name__
+
+            if func_name not in all_tasks:
+                all_tasks[func_name] = []
+
+            all_tasks[func_name].append((index, func(self, *item["args"], **item["kwargs"])))
+
+        # Generate all tasks to be executed
+        task_names = []
+        task_indexes = []
+        tasks_to_exec = []
+        for func_name, tasks in all_tasks.items():
+            task_names.append(func_name)
+            if len(tasks) == 1:
+                tasks_to_exec.append(tasks[0][1])
+                task_indexes.append([tasks[0][0]])
+            else:
+                coroutines = [item[1] for item in tasks]
+                task_indexes.append([item[0] for item in tasks])
+                tasks_to_exec.append(self.__sequential_execution_all(*coroutines))
+
+        # Execute all tasks
+        results = await gather(*tasks_to_exec)
+
+        # Add the results to the drive queue
+        for func_results, indexes in zip(results, task_indexes):
+            if not isinstance(func_results, list):
+                func_results = [func_results]
+
+            for index, result in zip(indexes, func_results):
+                self.queue[index]["dut_result"] = result
+
+        return dict(zip(task_names, results))
+
+    def __compare_results(self):
+        """Compare the results of the DUT and the models."""
+
+        for item in self.queue:
+            driver: Driver = item["driver"]
+            if driver.result_compare:
+                driver.compare_results(item["dut_result"], item["model_results"])
+
+    async def schedule(self):
+
+        await self.__get_model_results()
+        dut_result = await self.__get_dut_results()
+        self.__compare_results()
+        self.queue.clear()
+
+        return dut_result
+
+
 class Env:
     """Provides an environment for operation on the DUT."""
 
@@ -63,89 +169,7 @@ class Env:
 
         return self
 
-    async def __get_model_results(self):
-        """
-        Get the results from the models.
-        It will add the results to the drive queue with the key "model_results".
-        """
 
-        for item in self.drive_queue:
-            driver: Driver = item["driver"]
-
-            results = await driver.forward_to_models(self.attached_model, \
-                                                     item["args"], item["kwargs"])
-            item["model_results"] = results
-
-    async def __get_dut_results(self):
-        """
-        Get the results from the DUT.
-        It will add the results to the drive queue with the key "dut_result".
-        """
-
-        # Group all tasks by function name
-        all_tasks = {}
-        for index, item in enumerate(self.drive_queue):
-            func = item["driver"].drive_func
-            func_name = func.__name__
-
-            if func_name not in all_tasks:
-                all_tasks[func_name] = []
-
-            all_tasks[func_name].append((index, func(self, *item["args"], **item["kwargs"])))
-
-        # Generate all tasks to be executed
-        task_names = []
-        task_indexes = []
-        tasks_to_exec = []
-        for func_name, tasks in all_tasks.items():
-            task_names.append(func_name)
-            if len(tasks) == 1:
-                tasks_to_exec.append(tasks[0][1])
-                task_indexes.append([tasks[0][0]])
-            else:
-                coroutines = [item[1] for item in tasks]
-                task_indexes.append([item[0] for item in tasks])
-                tasks_to_exec.append(self.__sequential_execution_all(*coroutines))
-
-        # Execute all tasks
-        results = await gather(*tasks_to_exec)
-
-        # Add the results to the drive queue
-        for func_results, indexes in zip(results, task_indexes):
-            if not isinstance(func_results, list):
-                func_results = [func_results]
-
-            for index, result in zip(indexes, func_results):
-                self.drive_queue[index]["dut_result"] = result
-
-        return dict(zip(task_names, results))
-
-    def __compare_results(self):
-        """Compare the results of the DUT and the models."""
-
-        for item in self.drive_queue:
-            driver: Driver = item["driver"]
-            if driver.result_compare:
-                driver.compare_results(item["dut_result"], item["model_results"])
-
-    async def drive_completed(self):
-        """Drive all the tasks in the drive queue."""
-
-        await self.__get_model_results()
-        dut_result = await self.__get_dut_results()
-        self.__compare_results()
-        self.drive_queue.clear()
-
-        return dut_result
-
-    @staticmethod
-    async def __sequential_execution_all(*tasks):
-        """Sequentially execute all tasks."""
-
-        results = []
-        for task in tasks:
-            results.append(await task)
-        return results
 
     def __ensure_model_match(self, model):
         """
@@ -203,10 +227,14 @@ class Env:
             if hasattr(getattr(self, attr), "__is_monitor_decorated__"):
                 yield getattr(self, attr)
 
+    def drive_completed(self):
+        """Drive all the tasks in the drive queue."""
+
+        return ModelFirstScheduler(self.drive_queue, self.attached_model).schedule()
 
 
 def driver_method(*, model_sync=True, imme_ret=True, match_func=False, \
-                  result_compare=False, compare_method=None, name_to_match=None):
+                  result_compare=False, compare_method=None, name_to_match=None, sche_group=None):
     """
     Decorator for driver method.
 
@@ -217,7 +245,7 @@ def driver_method(*, model_sync=True, imme_ret=True, match_func=False, \
 
     def decorator(func):
         driver = Driver(func, model_sync, imme_ret, match_func, \
-                        result_compare, compare_method, name_to_match)
+                        result_compare, compare_method, name_to_match, sche_group)
         return driver.wrapped_func()
     return decorator
 

@@ -22,7 +22,7 @@ class Driver(BaseAgent):
     """
 
     def __init__(self, drive_func, model_sync, imme_ret, match_func, \
-                  result_compare, compare_method, name_to_match):
+                  result_compare, compare_method, name_to_match, sche_group):
         super().__init__(drive_func, name_to_match)
 
         self.drive_func = drive_func
@@ -32,6 +32,8 @@ class Driver(BaseAgent):
         self.match_func = match_func
         self.result_compare = result_compare
         self.compare_method = compare_method
+
+        self.sche_group = sche_group if sche_group is not None else self.name
 
         assert model_sync or not result_compare, "result_compare can be true only if model_sync is true"
         assert match_func or not result_compare, "result_compare can be true only if match_func is true"
@@ -143,9 +145,15 @@ class Driver(BaseAgent):
             The result of the DUT if imme_ret is False, otherwise None.
         """
 
+        sche_group = self.sche_group
+        if "sche_group" in kwarg_list:
+            sche_group = kwarg_list["sche_group"]
+            del kwarg_list["sche_group"]
+
         if self.imme_ret:
             env.drive_queue.append({
                 "driver": self,
+                "sche_group": sche_group,
                 "args": arg_list,
                 "kwargs": kwarg_list
             })
