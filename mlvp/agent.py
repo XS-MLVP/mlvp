@@ -6,6 +6,7 @@ from .logger import critical
 
 class BaseAgent:
     def __init__(self, func, name_to_match: str):
+        self.func = func
         self.name = func.__name__
         self.name_to_match = name_to_match
 
@@ -25,7 +26,6 @@ class Driver(BaseAgent):
                   result_compare, compare_method, name_to_match, sche_group):
         super().__init__(drive_func, name_to_match)
 
-        self.drive_func = drive_func
         self.model_sync = model_sync
         self.imme_ret = imme_ret
 
@@ -39,9 +39,9 @@ class Driver(BaseAgent):
         assert match_func or not result_compare, "result_compare can be true only if match_func is true"
         assert result_compare or compare_method is None, "compare_method takes effect only if result_compare is true"
 
-        self.drive_func.__is_driver_decorated__ = True
-        self.drive_func.__is_match_func__ = match_func
-        self.drive_func.__is_model_sync__ = model_sync
+        self.func.__is_driver_decorated__ = True
+        self.func.__is_match_func__ = match_func
+        self.func.__is_model_sync__ = model_sync
 
     def __get_args_dict(self, arg_list, kwarg_list):
         """
@@ -55,7 +55,7 @@ class Driver(BaseAgent):
             The args and kwargs in the form of dictionary.
         """
 
-        signature = inspect.signature(self.drive_func)
+        signature = inspect.signature(self.func)
         bound_args = signature.bind(None, *arg_list, **kwarg_list)
         bound_args.apply_defaults()
         arguments = bound_args.arguments
@@ -161,7 +161,7 @@ class Driver(BaseAgent):
         else:
             model_results = await self.forward_to_models(env.attached_model, \
                                                             arg_list, kwarg_list)
-            dut_result = await self.drive_func(env, *arg_list, **kwarg_list)
+            dut_result = await self.func(env, *arg_list, **kwarg_list)
 
             if self.result_compare:
                 self.compare_results(dut_result, model_results)
@@ -177,9 +177,8 @@ class Driver(BaseAgent):
 
         driver = self
 
-        @functools.wraps(self.drive_func)
-        async def wrapper(self, *args, **kwargs):
-            env: Env = self
+        @functools.wraps(self.func)
+        async def wrapper(env, *args, **kwargs):
             return await driver.__process_driver_call(env, args, kwargs)
         return wrapper
 
@@ -195,7 +194,6 @@ class Monitor(BaseAgent):
         self.compare_queue = Queue()
         self.get_queue = Queue()
 
-        self.monitor_func = monitor_func
         self.model_compare = model_compare
         self.auto_monitor = auto_monitor
         self.compare_func = compare_func
@@ -204,8 +202,8 @@ class Monitor(BaseAgent):
         self.comparator = None
         self.monitor_task = None
 
-        self.monitor_func.__is_monitor_decorated__ = True
-        self.monitor_func.__is_model_compare__ = model_compare
+        self.func.__is_monitor_decorated__ = True
+        self.func.__is_model_compare__ = model_compare
 
     def __start(self, env):
         """
@@ -236,10 +234,8 @@ class Monitor(BaseAgent):
 
         monitor = self
 
-        @functools.wraps(monitor.monitor_func)
-        async def wrapper(self, *args, **kwargs):
-            env = self
-
+        @functools.wraps(monitor.func)
+        async def wrapper(env, *args, **kwargs):
             if 'config_env' in kwargs and kwargs['config_env']:
                 monitor.__start(env)
                 return
@@ -247,7 +243,7 @@ class Monitor(BaseAgent):
             if monitor.auto_monitor:
                 return await monitor.get_queue.get()
             else:
-                item = await monitor.monitor_func(env, *args, **kwargs)
+                item = await monitor.func(env, *args, **kwargs)
                 await monitor.compare_queue.put(item)
                 return item
         return wrapper
@@ -256,7 +252,7 @@ class Monitor(BaseAgent):
         """Monitor the DUT forever."""
 
         while True:
-            ret = await self.monitor_func(self.env)
+            ret = await self.func(self.env)
             if ret is not None:
                 await self.get_queue.put(ret)
                 await self.compare_queue.put(ret)

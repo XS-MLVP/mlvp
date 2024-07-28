@@ -56,7 +56,7 @@ class ModelFirstScheduler(MsgScheduler):
         # Group all tasks by function name
         all_tasks = {}
         for index, item in enumerate(self.queue):
-            func = item["driver"].drive_func
+            func = item["driver"].func
             func_name = func.__name__
 
             if func_name not in all_tasks:
