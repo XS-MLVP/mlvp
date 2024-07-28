@@ -1,8 +1,6 @@
 import sys
 import asyncio
 from .bundle import Bundle
-from . import reg
-
 
 # Asynchronous event definition
 
@@ -89,7 +87,6 @@ async def start_clock(dut):
         dut.event.set()
         dut.event.clear()
         process_delay()
-        reg.update_regs()
         await asyncio.sleep(0)
 
 def set_clock_event(dut, loop):
