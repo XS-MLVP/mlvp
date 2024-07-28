@@ -6,7 +6,8 @@ from .agent import Monitor, Driver
 class MsgScheduler:
     """The message scheduler."""
 
-    def __init__(self, queue: list, models: list):
+    def __init__(self, env, queue: list, models: list):
+        self.env = env
         self.queue = queue
         self.models = models
 
@@ -21,7 +22,7 @@ class MsgScheduler:
         raise NotImplementedError("The method sche is not implemented")
 
     @staticmethod
-    async def __sequential_execution_all(*tasks):
+    async def sequential_execution_all(*tasks):
         """Sequentially execute all tasks."""
 
         results = []
@@ -57,26 +58,26 @@ class ModelFirstScheduler(MsgScheduler):
         all_tasks = {}
         for index, item in enumerate(self.queue):
             func = item["driver"].func
-            func_name = func.__name__
+            sche_group = item["sche_group"]
 
-            if func_name not in all_tasks:
-                all_tasks[func_name] = []
+            if sche_group not in all_tasks:
+                all_tasks[sche_group] = []
 
-            all_tasks[func_name].append((index, func(self, *item["args"], **item["kwargs"])))
+            all_tasks[sche_group].append((index, func(self.env, *item["args"], **item["kwargs"])))
 
         # Generate all tasks to be executed
-        task_names = []
+        sche_groups = []
         task_indexes = []
         tasks_to_exec = []
-        for func_name, tasks in all_tasks.items():
-            task_names.append(func_name)
+        for sche_group, tasks in all_tasks.items():
+            sche_groups.append(sche_group)
             if len(tasks) == 1:
                 tasks_to_exec.append(tasks[0][1])
                 task_indexes.append([tasks[0][0]])
             else:
                 coroutines = [item[1] for item in tasks]
                 task_indexes.append([item[0] for item in tasks])
-                tasks_to_exec.append(self.__sequential_execution_all(*coroutines))
+                tasks_to_exec.append(self.sequential_execution_all(*coroutines))
 
         # Execute all tasks
         results = await gather(*tasks_to_exec)
@@ -89,7 +90,7 @@ class ModelFirstScheduler(MsgScheduler):
             for index, result in zip(indexes, func_results):
                 self.queue[index]["dut_result"] = result
 
-        return dict(zip(task_names, results))
+        return dict(zip(sche_groups, results))
 
     def __compare_results(self):
         """Compare the results of the DUT and the models."""
@@ -100,7 +101,6 @@ class ModelFirstScheduler(MsgScheduler):
                 driver.compare_results(item["dut_result"], item["model_results"])
 
     async def schedule(self):
-
         await self.__get_model_results()
         dut_result = await self.__get_dut_results()
         self.__compare_results()
@@ -125,8 +125,7 @@ class Env:
         self.monitor_step = monitor_step
 
         # Env will assign self to all monitor methods
-        for func_name in self.__all_monitor_method():
-            monitor_func = getattr(self, func_name)
+        for monitor_func in self.__all_monitor_method():
             create_task(monitor_func(self, config_env=True))
 
     def attach(self, model):
@@ -230,7 +229,7 @@ class Env:
     def drive_completed(self):
         """Drive all the tasks in the drive queue."""
 
-        return ModelFirstScheduler(self.drive_queue, self.attached_model).schedule()
+        return ModelFirstScheduler(self, self.drive_queue, self.attached_model).schedule()
 
 
 def driver_method(*, model_sync=True, imme_ret=True, match_func=False, \
