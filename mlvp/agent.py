@@ -26,7 +26,7 @@ class Driver(BaseAgent):
 
     def __init__(self, drive_func, model_sync, imme_ret, match_func, \
                   need_compare, compare_func, name_to_match, sche_group):
-        super().__init__(drive_func, name_to_match, compare_func)
+        super().__init__(drive_func, name_to_match, need_compare, compare_func)
 
         self.model_sync = model_sync
         self.imme_ret = imme_ret
@@ -188,7 +188,7 @@ class Monitor(BaseAgent):
     """
 
     def __init__(self, monitor_func, need_compare, auto_monitor, compare_func, name_to_match):
-        super().__init__(monitor_func, name_to_match, compare_func)
+        super().__init__(monitor_func, name_to_match, need_compare, compare_func)
 
         self.compare_queue = Queue()
         self.get_queue = Queue()
