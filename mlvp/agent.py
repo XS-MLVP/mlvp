@@ -220,6 +220,16 @@ class Monitor(BaseAgent):
                 model_ports.append(model.get_monitor_method(self.name_to_match))
             self.comparator = Comparator(self.compare_queue, model_ports, compare=self.compare_func, match_detail=True)
 
+    def get_queue_size(self):
+        """
+        Get the size of the get queue.
+
+        Returns:
+            The size of the get queue.
+        """
+
+        return self.get_queue.qsize()
+
     def wrapped_func(self):
         """
         Wrap the original monitor function.
@@ -242,6 +252,9 @@ class Monitor(BaseAgent):
                 item = await monitor.func(env, *args, **kwargs)
                 await monitor.compare_queue.put(item)
                 return item
+
+        wrapper.size = self.get_queue_size
+
         return wrapper
 
     async def __monitor_forever(self):
