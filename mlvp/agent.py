@@ -5,10 +5,12 @@ from .asynchronous import create_task, Queue
 from .logger import critical
 
 class BaseAgent:
-    def __init__(self, func, name_to_match: str):
+    def __init__(self, func, name_to_match: str, need_compare, compare_func):
         self.func = func
         self.name = func.__name__
         self.name_to_match = name_to_match
+        self.need_compare = need_compare
+        self.compare_func = compare_func
 
         if self.name_to_match is None:
             self.name_to_match = self.name
@@ -23,21 +25,18 @@ class Driver(BaseAgent):
     """
 
     def __init__(self, drive_func, model_sync, imme_ret, match_func, \
-                  result_compare, compare_method, name_to_match, sche_group):
-        super().__init__(drive_func, name_to_match)
+                  need_compare, compare_func, name_to_match, sche_group):
+        super().__init__(drive_func, name_to_match, compare_func)
 
         self.model_sync = model_sync
         self.imme_ret = imme_ret
-
         self.match_func = match_func
-        self.result_compare = result_compare
-        self.compare_method = compare_method
 
         self.sche_group = sche_group if sche_group is not None else self.name
 
-        assert model_sync or not result_compare, "result_compare can be true only if model_sync is true"
-        assert match_func or not result_compare, "result_compare can be true only if match_func is true"
-        assert result_compare or compare_method is None, "compare_method takes effect only if result_compare is true"
+        assert model_sync or not need_compare, "need_compare can be true only if model_sync is true"
+        assert match_func or not need_compare, "need_compare can be true only if match_func is true"
+        assert need_compare or compare_func is None, "compare_func takes effect only if need_compare is true"
 
         self.func.__is_driver_decorated__ = True
         self.func.__is_match_func__ = match_func
@@ -126,11 +125,11 @@ class Driver(BaseAgent):
             model_results: The results of the models.
         """
 
-        if not self.result_compare:
+        if not self.need_compare:
             return
 
         for model_result in model_results:
-            compare_once(dut_result, model_result, self.compare_method, match_detail=True)
+            compare_once(dut_result, model_result, self.compare_func, match_detail=True)
 
     async def __process_driver_call(self, env, arg_list, kwarg_list):
         """
@@ -163,7 +162,7 @@ class Driver(BaseAgent):
                                                             arg_list, kwarg_list)
             dut_result = await self.func(env, *arg_list, **kwarg_list)
 
-            if self.result_compare:
+            if self.need_compare:
                 self.compare_results(dut_result, model_results)
             return dut_result
 
@@ -188,22 +187,19 @@ class Monitor(BaseAgent):
     The Monitor is used to monitor the DUT and compare the output with the reference.
     """
 
-    def __init__(self, monitor_func, model_compare, auto_monitor, compare_func, name_to_match):
-        super().__init__(monitor_func, name_to_match)
+    def __init__(self, monitor_func, need_compare, auto_monitor, compare_func, name_to_match):
+        super().__init__(monitor_func, name_to_match, compare_func)
 
         self.compare_queue = Queue()
         self.get_queue = Queue()
-
-        self.model_compare = model_compare
         self.auto_monitor = auto_monitor
-        self.compare_func = compare_func
 
         self.env = None
         self.comparator = None
         self.monitor_task = None
 
         self.func.__is_monitor_decorated__ = True
-        self.func.__is_model_compare__ = model_compare
+        self.func.__need_compare__ = need_compare
 
     def __start(self, env):
         """
@@ -218,7 +214,7 @@ class Monitor(BaseAgent):
         if self.auto_monitor:
             self.monitor_task = create_task(self.__monitor_forever())
 
-        if self.model_compare:
+        if self.need_compare:
             model_ports = []
             for model in env.attached_model:
                 model_ports.append(model.get_monitor_method(self.name_to_match))

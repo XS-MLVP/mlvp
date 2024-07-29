@@ -56,7 +56,7 @@ class ModelFirstScheduler(MsgScheduler):
         queue_item["dut_result"] = await coro
 
         driver = queue_item["driver"]
-        if driver.result_compare:
+        if driver.need_compare:
             driver.compare_results(queue_item["dut_result"], queue_item["model_results"])
 
     async def __get_dut_results(self):
@@ -129,7 +129,7 @@ class BeforeModelScheduler(MsgScheduler):
         await self.forward_to_models(queue_item)
 
         driver = queue_item["driver"]
-        if driver.result_compare:
+        if driver.need_compare:
             driver.compare_results(queue_item["dut_result"], queue_item["model_results"])
 
     async def __get_results(self):
@@ -192,7 +192,7 @@ class AfterModelScheduler(BeforeModelScheduler):
         queue_item["dut_result"] = await coro
 
         driver = queue_item["driver"]
-        if driver.result_compare:
+        if driver.need_compare:
             driver.compare_results(queue_item["dut_result"], queue_item["model_results"])
 
 class Env:
@@ -280,7 +280,7 @@ class Env:
                     raise ValueError(f"Model {model} does not have driver method {driver_method.__name_to_match__}")
 
         for monitor_method in self.__all_monitor_method():
-            if not monitor_method.__is_model_compare__:
+            if not monitor_method.__need_compare__:
                 continue
 
             if not model.get_monitor_method(monitor_method.__name_to_match__):
@@ -328,37 +328,46 @@ class Env:
 
 
 def driver_method(*, model_sync=True, imme_ret=True, match_func=False, \
-                  result_compare=False, compare_method=None, name_to_match=None, sche_group=None):
+                  need_compare=False, compare_func=None, name_to_match=None, sche_group=None):
     """
     Decorator for driver method.
 
     Args:
-        model_sync: Whether to synchronize the driver method with the model.
-        imme_ret: Whether to return immediately.
+        model_sync:    Whether to synchronize the driver method with the model.
+        imme_ret:      Whether to return immediately.
+        match_func:    Whether to match the function.
+        need_compare:  Whether to compare the output with the reference.
+        compare_func:  The function to implement the comparison. If it is None, the default.
+        name_to_match: The name to match the driver method or function in the model.
+        sche_group:    The schedule group.
+
+    Returns:
+        The decorator for driver method.
     """
 
     def decorator(func):
         driver = Driver(func, model_sync, imme_ret, match_func, \
-                        result_compare, compare_method, name_to_match, sche_group)
+                        need_compare, compare_func, name_to_match, sche_group)
         return driver.wrapped_func()
     return decorator
 
-def monitor_method(*, model_compare=True, auto_monitor=True, compare_func=None, name_to_match=None):
+def monitor_method(*, need_compare=True, auto_monitor=True, compare_func=None, name_to_match=None):
     """
     Decorator for monitor method.
 
     Args:
-        model_compare: Whether to compare the output with the reference.
-        auto_monitor: Whether to monitor automatically. If True, the monitor will
-                      monitor the DUT forever in the background.
-        compare_func: The function to implement the comparison. If it is None, the default
-                      comparison function will be used.
+        need_compare:  Whether to compare the output with the reference.
+        auto_monitor:  Whether to monitor automatically. If True, the monitor will monitor the DUT forever in the
+                       background.
+        compare_func:  The function to implement the comparison. If it is None, the default
+                       comparison function will be used.
+        name_to_match: The name to match the monitor method.
 
     Returns:
         The decorator for monitor method.
     """
 
     def decorator(func):
-        monitor = Monitor(func, model_compare, auto_monitor, compare_func, name_to_match)
+        monitor = Monitor(func, need_compare, auto_monitor, compare_func, name_to_match)
         return monitor.wrapped_func()
     return decorator
