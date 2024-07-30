@@ -689,6 +689,24 @@ class Bundle(MObject):
 
         return NewBundle
 
+    @classmethod
+    def from_xport(cls, xport):
+        """
+        Create a bundle from an XPort.
+
+        Args:
+            xport: The XPort to create the bundle from.
+
+        Returns:
+            A new bundle.
+        """
+
+        signal_list = xport.GetKeys()
+        bundle = cls.new_class_from_list(signal_list)()
+        for signal in signal_list:
+            setattr(bundle, signal, xport[signal])
+        return bundle
+
     def all_signals(self, level_string=""):
         """
         Yield all signals of the bundle.
