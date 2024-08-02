@@ -5,6 +5,7 @@ import pytest
 import os
 import sys
 import uuid
+from collections import Counter
 from .funcov import CovGroup
 from .base import convert_line_coverage
 
@@ -91,16 +92,8 @@ def __update_func_coverage__(__func_coverage__):
                     result[key] = merge_dicts(result[key], value)
                 elif isinstance(result[key], list) and isinstance(value, list):
                     if key == "points" or key == "bins":
-                        if key == "points":
-                            bins1 = []
-                            for d in result[key]:
-                                for bin in d["bins"]:
-                                    bins1.append(bin["name"])
-                            bins2 = []
-                            for d in value:
-                                for bin in d["bins"]:
-                                    bins2.append(bin["name"])
-                            assert bins1 == bins2, f"bins in points {dict1['name']} should be same"
+                        if key == "bins":
+                            assert Counter([x['name'] for x in value]) == Counter(x['name'] for x in result[key]), f"bins in points {dict1['name']} should be same"
                         old_keys = {a["name"]: i for i, a in enumerate(result[key])}
                         for data in value:
                             if data["name"] not in old_keys:
