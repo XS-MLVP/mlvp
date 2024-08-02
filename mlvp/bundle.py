@@ -720,6 +720,19 @@ class Bundle(MObject):
         for sub_bundle_name, sub_bundle in self.__all_sub_bundles():
             yield from sub_bundle.all_signals(Bundle.appended_level_string(level_string, sub_bundle_name))
 
+    def __getitem__(self, key):
+        """
+        Get the signal by key.
+
+        Args:
+            key: The key of the signal.
+
+        Returns:
+            The signal.
+        """
+
+        return getattr(self, key, None)
+
     def add_signal_attr(self, signal_name, signal, info_bundle_name, info_dut_name):
         """
         Add a signal attribute to the bundle and log the connection.
