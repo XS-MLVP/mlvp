@@ -689,6 +689,20 @@ class Bundle(MObject):
 
         return NewBundle
 
+    @staticmethod
+    def new_class_from_xport(xport):
+        """
+        Create a new bundle class with an XPort quickly.
+
+        Args:
+            xport: The XPort to create the bundle from.
+
+        Returns:
+            A new bundle class.
+        """
+
+        return Bundle.new_class_from_list(xport.GetKeys())
+
     @classmethod
     def from_xport(cls, xport):
         """
