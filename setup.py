@@ -20,7 +20,7 @@ setup(
     ],
 
     name="mlvp",
-    version="0.0.1",
+    version="0.0.2",
     author="MLVP Team",
     author_email="879754743@qq.com",
     description="Multi-Language Verification Platform",
