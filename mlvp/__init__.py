@@ -1,5 +1,4 @@
 from .asynchronous import start_clock, create_task, run, gather
-from .asynchronous import delay_func, delay_assign
 from .asynchronous import Event, Queue, sleep
 from .asynchronous import Component
 
