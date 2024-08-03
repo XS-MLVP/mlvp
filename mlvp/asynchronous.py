@@ -11,9 +11,13 @@ def tick_timestamp():
 
 def has_unwait_task():
     for task in asyncio.all_tasks():
-        task_str = task.__str__()
-        if ("start_clock" not in task_str and "wait_for" not in task_str) or ("finished" in task_str):
+
+        if task.get_name() == "__clock_loop":
+            continue
+
+        if task._fut_waiter is None or task._fut_waiter._state == "FINISHED":
             return True
+
     return False
 
 async def tick_clock_ready():
@@ -80,7 +84,9 @@ def delay_func(func, delay = 1):
 
 # Asynchronous core function
 
-async def start_clock(dut):
+create_task = asyncio.create_task
+
+async def __clock_loop(dut):
     while True:
         await tick_clock_ready()
         dut.Step(1)
@@ -88,6 +94,11 @@ async def start_clock(dut):
         dut.event.clear()
         process_delay()
         await asyncio.sleep(0)
+
+def start_clock(dut):
+    task = create_task(__clock_loop(dut))
+    task.set_name("__clock_loop")
+
 
 def set_clock_event(dut, loop):
     new_event = asyncio.Event(loop=loop)
@@ -110,7 +121,6 @@ def run(coro, dut=None):
     result = loop.run_until_complete(coro)
     return result
 
-create_task = asyncio.create_task
 
 async def gather(*tasks):
     all_tasks = []
