@@ -129,6 +129,5 @@ class Executor(MObject):
 
     @staticmethod
     def get_driver(coro):
-        function_name = coro.__name__
         locals = coro.cr_frame.f_locals
         return locals.get("__driver_object__", None)

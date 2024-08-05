@@ -131,10 +131,16 @@ async def __clock_loop(dut):
 
 create_task = asyncio.create_task
 
+
+# When start_clock is called, global_clock_event points to the clock event in the dut
+global_clock_event = None
+
 def start_clock(dut):
     """
     Start a clock loop on a DUT.
     """
+    global global_clock_event
+    global_clock_event = dut.event
 
     task = create_task(__clock_loop(dut))
     task.set_name("__clock_loop")
@@ -153,7 +159,19 @@ def set_clock_event(dut, loop):
     for xpin_info in Bundle.dut_all_signals(dut):
         xpin = xpin_info["signal"]
         xpin.event = new_event
-        print(xpin.event, new_event)
+
+async def main_coro(coro):
+    """
+    Run the main coroutine.
+    """
+
+    ret = await coro
+
+    # Wait for the last clock event to complete all outstanding tasks during the period
+    if global_clock_event is not None:
+        await global_clock_event.wait()
+
+    return ret
 
 def run(coro, dut=None):
     """
@@ -166,6 +184,8 @@ def run(coro, dut=None):
     Returns:
         The result of the coroutine.
     """
+
+    coro = main_coro(coro)
 
     if sys.version_info >= (3, 10, 1):
         return asyncio.run(coro)
