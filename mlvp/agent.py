@@ -1,7 +1,7 @@
 import functools
 import inspect
 from .compare import Comparator, compare_once
-from .asynchronous import create_task, Queue, add_callback
+from .asynchronous import create_task, Queue
 from .executor import add_priority_task
 from .logger import critical
 
@@ -139,7 +139,7 @@ class Driver(BaseAgent):
         if results["dut_result"] is not None:
             compare_func(results["dut_result"], results["model_results"])
 
-    async def __process_driver_call(self, env, arg_list, kwarg_list):
+    async def process_driver_call(self, env, arg_list, kwarg_list):
         """
         Process the driver call.
 
@@ -181,12 +181,12 @@ class Driver(BaseAgent):
             The wrapped driver function.
         """
 
+        # In executor, we use __driver_object__ to get the driver object.
         __driver_object__ = self
 
         @functools.wraps(self.func)
         async def wrapper(env, *args, **kwargs):
-            is_driver_wrapper = False
-            return await __driver_object__.__process_driver_call(env, args, kwargs)
+            return await __driver_object__.process_driver_call(env, args, kwargs)
         return wrapper
 
 
