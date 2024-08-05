@@ -328,7 +328,7 @@ class Env:
 
 
 def driver_method(*, model_sync=True, imme_ret=True, match_func=False, \
-                  need_compare=False, compare_func=None, name_to_match=None, sche_group=None):
+                  need_compare=False, compare_func=None, name_to_match=None, sche_group=None, model_sche="model_first"):
     """
     Decorator for driver method.
 
@@ -347,7 +347,7 @@ def driver_method(*, model_sync=True, imme_ret=True, match_func=False, \
 
     def decorator(func):
         driver = Driver(func, model_sync, imme_ret, match_func, \
-                        need_compare, compare_func, name_to_match, sche_group)
+                        need_compare, compare_func, name_to_match, sche_group, model_sche)
         return driver.wrapped_func()
     return decorator
 

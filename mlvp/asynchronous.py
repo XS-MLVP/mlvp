@@ -44,7 +44,7 @@ async def __run_once():
     new_task_run = False
     await asyncio.sleep(0)
 
-async def other_tasks_done():
+async def __other_tasks_done():
     """
     Wait for all tasks to complete. This means that all tasks are waiting at this time, and there are no tasks that
     can be executed.
@@ -54,6 +54,7 @@ async def other_tasks_done():
     await __run_once()
     while __has_unwait_task() or new_task_run:
         await __run_once()
+
 class Event(asyncio.Event):
     """
     Change the function in the Event to meet the asynchronous requirements.
@@ -65,6 +66,7 @@ class Event(asyncio.Event):
     async def wait(self):
         await super().wait()
         task_run()
+
 class Queue(asyncio.Queue):
     """
     Change the function in the Queue to meet the asynchronous requirements.
@@ -90,12 +92,28 @@ async def sleep(delay: float):
     await asyncio.sleep(delay)
     task_run()
 
+
 """Asynchronous primary interface
 
 Using the asynchronous event logic defined above, the external asynchronous interface in mlvp library is implemented.
 """
 
-create_task = asyncio.create_task
+callback_list = []
+
+def add_callback(coro, *args, **kwargs):
+    """
+    Add a callback function to the callback list.
+    """
+
+    callback_list.append((coro, args, kwargs))
+
+async def __execute_callback():
+    """
+    Execute the callback function. The Callback will be executed between the next clock time after other_task_done.
+    """
+
+    for func, args, kwargs in callback_list:
+        await func(*args, **kwargs)
 
 async def __clock_loop(dut):
     """
@@ -105,10 +123,13 @@ async def __clock_loop(dut):
     global new_task_run
 
     while True:
-        await other_tasks_done()
+        await __other_tasks_done()
+        await __execute_callback()
         dut.Step(1)
         dut.event.set()
         dut.event.clear()
+
+create_task = asyncio.create_task
 
 def start_clock(dut):
     """

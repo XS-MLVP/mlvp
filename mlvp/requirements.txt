@@ -1,3 +1,0 @@
-pytest==7.4.3
-pytest-reporter-html1>=0.8.4
-pytest-xdist>=3.5.0

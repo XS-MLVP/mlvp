@@ -1,7 +1,8 @@
 import functools
 import inspect
 from .compare import Comparator, compare_once
-from .asynchronous import create_task, Queue
+from .asynchronous import create_task, Queue, add_callback
+from .executor import add_priority_task
 from .logger import critical
 
 class BaseAgent:
@@ -25,19 +26,23 @@ class Driver(BaseAgent):
     """
 
     def __init__(self, drive_func, model_sync, imme_ret, match_func, \
-                  need_compare, compare_func, name_to_match, sche_group):
+                  need_compare, compare_func, name_to_match, sche_group, model_sche):
         super().__init__(drive_func, name_to_match, need_compare, compare_func)
 
         self.model_sync = model_sync
         self.imme_ret = imme_ret
         self.match_func = match_func
+        self.model_sche = model_sche
 
         self.sche_group = sche_group if sche_group is not None else self.name
+
+        self.priority = 99
 
         assert model_sync or not need_compare, "need_compare can be true only if model_sync is true"
         assert match_func or not need_compare, "need_compare can be true only if match_func is true"
         assert need_compare or compare_func is None, "compare_func takes effect only if need_compare is true"
 
+        self.func.__driver__ = self
         self.func.__is_driver_decorated__ = True
         self.func.__is_match_func__ = match_func
         self.func.__is_model_sync__ = model_sync
@@ -131,6 +136,12 @@ class Driver(BaseAgent):
         for model_result in model_results:
             compare_once(dut_result, model_result, self.compare_func, match_detail=True)
 
+    async def model_exec_wrapper(self, model_coro, results, compare_func):
+        results["model_results"] = await model_coro
+
+        if results["dut_result"] is not None:
+            compare_func(results["dut_result"], results["model_results"])
+
     async def __process_driver_call(self, env, arg_list, kwarg_list):
         """
         Process the driver call.
@@ -144,27 +155,26 @@ class Driver(BaseAgent):
             The result of the DUT if imme_ret is False, otherwise None.
         """
 
-        sche_group = self.sche_group
-        if "sche_group" in kwarg_list:
-            sche_group = kwarg_list["sche_group"]
-            del kwarg_list["sche_group"]
+        results = {"dut_result": None, "model_results": None}
 
-        if self.imme_ret:
-            env.drive_queue.append({
-                "driver": self,
-                "sche_group": sche_group,
-                "args": arg_list,
-                "kwargs": kwarg_list
-            })
+        model_coro = self.model_exec_wrapper(
+            self.forward_to_models(env.attached_model, arg_list, kwarg_list),
+            results,
+            self.compare_results
+        )
 
-        else:
-            model_results = await self.forward_to_models(env.attached_model, \
-                                                            arg_list, kwarg_list)
-            dut_result = await self.func(env, *arg_list, **kwarg_list)
+        if self.model_sche == "model_first":
+            add_priority_task(model_coro, self.priority)
 
-            if self.need_compare:
-                self.compare_results(dut_result, model_results)
-            return dut_result
+            results["dut_result"] = await self.func(env, *arg_list, **kwarg_list)
+            if results["model_results"] is not None:
+                self.compare_results(results["dut_result"], results["model_results"])
+
+        elif self.model_sche == "dut_first":
+            results["dut_result"] = await self.func(env, *arg_list, **kwarg_list)
+            add_priority_task(model_coro, self.priority)
+
+        return results["dut_result"]
 
     def wrapped_func(self):
         """
@@ -174,11 +184,12 @@ class Driver(BaseAgent):
             The wrapped driver function.
         """
 
-        driver = self
+        __driver_object__ = self
 
         @functools.wraps(self.func)
         async def wrapper(env, *args, **kwargs):
-            return await driver.__process_driver_call(env, args, kwargs)
+            is_driver_wrapper = False
+            return await __driver_object__.__process_driver_call(env, args, kwargs)
         return wrapper
 
 
