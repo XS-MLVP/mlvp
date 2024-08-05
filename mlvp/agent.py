@@ -25,16 +25,13 @@ class Driver(BaseAgent):
     the reference model.
     """
 
-    def __init__(self, drive_func, model_sync, imme_ret, match_func, \
-                  need_compare, compare_func, name_to_match, sche_group, model_sche):
+    def __init__(self, drive_func, model_sync, match_func, \
+                  need_compare, compare_func, name_to_match, sche_order):
         super().__init__(drive_func, name_to_match, need_compare, compare_func)
 
         self.model_sync = model_sync
-        self.imme_ret = imme_ret
         self.match_func = match_func
-        self.model_sche = model_sche
-
-        self.sche_group = sche_group if sche_group is not None else self.name
+        self.sche_order = sche_order
 
         self.priority = 99
 
@@ -163,14 +160,14 @@ class Driver(BaseAgent):
             self.compare_results
         )
 
-        if self.model_sche == "model_first":
+        if self.sche_order == "model_first":
             add_priority_task(model_coro, self.priority)
 
             results["dut_result"] = await self.func(env, *arg_list, **kwarg_list)
             if results["model_results"] is not None:
                 self.compare_results(results["dut_result"], results["model_results"])
 
-        elif self.model_sche == "dut_first":
+        elif self.sche_order == "dut_first":
             results["dut_result"] = await self.func(env, *arg_list, **kwarg_list)
             add_priority_task(model_coro, self.priority)
 
