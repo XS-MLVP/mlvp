@@ -171,6 +171,9 @@ class Driver(BaseAgent):
             results["dut_result"] = await self.func(agent, *arg_list, **kwarg_list)
             add_priority_task(model_coro, self.priority)
 
+        else:
+            raise ValueError(f"Invalid sche_order: {self.sche_order}")
+
         return results["dut_result"]
 
     def wrapped_func(self):
