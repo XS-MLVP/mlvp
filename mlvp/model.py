@@ -3,10 +3,10 @@ from .asynchronous import Component, Queue
 class Model(Component):
     def __init__(self):
         super().__init__()
-        self.attached_env = None
+        self.attached_agent = None
 
     def is_attached(self):
-        return self.attached_env is not None
+        return self.attached_agent is not None
 
     def get_driver_method(self, name: str):
         if hasattr(self, name) and isinstance(getattr(self, name), DriverMethod):

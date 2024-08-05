@@ -1,276 +1,161 @@
-import functools
-import inspect
-from .compare import Comparator, compare_once
-from .asynchronous import create_task, Queue
-from .executor import add_priority_task
-from .logger import critical
+from .logger import error, warning
+from .model import Model
+from .asynchronous import gather, create_task
+from .base_agent import Monitor, Driver
 
-class BaseAgent:
-    def __init__(self, func, name_to_match: str, need_compare, compare_func):
-        self.func = func
-        self.name = func.__name__
-        self.name_to_match = name_to_match
-        self.need_compare = need_compare
-        self.compare_func = compare_func
+class Agent:
+    """Provides an agent for operation on the DUT."""
 
-        if self.name_to_match is None:
-            self.name_to_match = self.name
-
-        func.__name_to_match__ = self.name_to_match
-
-
-class Driver(BaseAgent):
-    """
-    The Driver is used to drive the DUT and forward the driver information to
-    the reference model.
-    """
-
-    def __init__(self, drive_func, model_sync, match_func, \
-                  need_compare, compare_func, name_to_match, sche_order):
-        super().__init__(drive_func, name_to_match, need_compare, compare_func)
-
-        self.model_sync = model_sync
-        self.match_func = match_func
-        self.sche_order = sche_order
-
-        self.priority = 99
-
-        assert model_sync or not need_compare, "need_compare can be true only if model_sync is true"
-        assert match_func or not need_compare, "need_compare can be true only if match_func is true"
-        assert need_compare or compare_func is None, "compare_func takes effect only if need_compare is true"
-
-        self.func.__driver__ = self
-        self.func.__is_driver_decorated__ = True
-        self.func.__is_match_func__ = match_func
-        self.func.__is_model_sync__ = model_sync
-
-    def __get_args_dict(self, arg_list, kwarg_list):
+    def __init__(self, monitor_step):
         """
-        Get the args and kwargs in the form of dictionary.
+        Args:
+            monitor_step: Provide a step function for monitor, and monitor will monitor
+                          each step.
+        """
+
+        self.attached_model = []
+
+        self.monitor_step = monitor_step
+
+        # Env will assign self to all monitor methods
+        for monitor_func in self.__all_monitor_method():
+            create_task(monitor_func(self, config_agent=True))
+
+    def attach(self, model):
+        """
+        Attach a model to the agent.
 
         Args:
-            arg_list: The list of args.
-            kwarg_list: The list of kwargs.
+            model: The model to be attached.
 
         Returns:
-            The args and kwargs in the form of dictionary.
+            The agent itself.
         """
 
-        signature = inspect.signature(self.func)
-        bound_args = signature.bind(None, *arg_list, **kwarg_list)
-        bound_args.apply_defaults()
-        arguments = bound_args.arguments
-        del arguments["self"]
-        return arguments
+        self.__ensure_model_match(model)
+        if model.is_attached():
+            warning(f"Model {model} is already attached to an agent, the original agent will be replaced")
+            model.attached_agent = None
 
-    async def __drive_single_model(self, model, arg_list, kwarg_list):
+        self.attached_model.append(model)
+
+        return self
+
+    def unattach(self, model):
         """
-        Drive a single model.
+        Unattach a model from the agent.
 
         Args:
-            model: The model to be driven.
-            arg_list: The list of args.
-            kwarg_list: The list of kwargs.
+            model: The model to be unattached.
 
         Returns:
-            The result of the model.
+            The agentitself.
         """
 
-        if self.match_func:
-            target = model.get_driver_func(self.name_to_match)
-
-            if target is None:
-                critical(f"Model {model} does not have driver function \
-                            {self.name_to_match}")
-
-            if inspect.iscoroutinefunction(target):
-                result = await target(*arg_list, **kwarg_list)
-            else:
-                result = target(*arg_list, **kwarg_list)
-
-            return result
+        if model in self.attached_model:
+            self.attached_model.remove(model)
+            model.attached_agent = None
         else:
-            target = model.get_driver_method(self.name_to_match)
-            if target is not None:
-                args_dict = self.__get_args_dict(arg_list, kwarg_list)
-                args = next(iter(args_dict.values())) if len(args_dict) == 1 else args_dict
-                await target.put(args)
+            error(f"Model {model} is not attached to the agent")
+
+        return self
+
+    def __ensure_model_match(self, model):
+        """
+        Make sure the model matches the agent.
+
+        Args:
+            model: The model to be checked.
+
+        Raises:
+            ValueError: If the model does not match the agent.
+        """
+
+        if not isinstance(model, Model):
+            raise ValueError(f"Model {model} is not an instance of Model")
+
+        for driver_method in self.__all_driver_method():
+            if not driver_method.__is_model_sync__:
+                continue
+
+            if driver_method.__is_match_func__:
+                if not model.get_driver_func(driver_method.__name_to_match__):
+                    raise ValueError(f"Model {model} does not have driver function {driver_method.__name_to_match__}")
             else:
-                critical(f"Model {model} does not have driver method \
-                            {self.name_to_match}")
+                if not model.get_driver_method(driver_method.__name_to_match__):
+                    raise ValueError(f"Model {model} does not have driver method {driver_method.__name_to_match__}")
 
-    async def forward_to_models(self, models, arg_list, kwarg_list):
+        for monitor_method in self.__all_monitor_method():
+            if not monitor_method.__need_compare__:
+                continue
+
+            if not model.get_monitor_method(monitor_method.__name_to_match__):
+                raise ValueError(f"Model {model} does not have monitor method {monitor_method.__name_to_match__}")
+
+    def __all_driver_method(self):
         """
-        Forward the item to the models.
-
-        Args:
-            models: The models to be forwarded to.
-            arg_list: The list of args.
-            kwarg_list: The list of kwargs.
-        """
-
-        if not self.model_sync:
-            return
-
-        results = []
-        for model in models:
-            results.append(await self.__drive_single_model(model, arg_list, kwarg_list))
-
-        return results
-
-    def compare_results(self, dut_result, model_results):
-        """
-        Compare the result of the DUT and the models.
-
-        Args:
-            dut_result: The result of the DUT.
-            model_results: The results of the models.
-        """
-
-        if not self.need_compare:
-            return
-
-        for model_result in model_results:
-            compare_once(dut_result, model_result, self.compare_func, match_detail=True)
-
-    async def model_exec_wrapper(self, model_coro, results, compare_func):
-        results["model_results"] = await model_coro
-
-        if results["dut_result"] is not None:
-            compare_func(results["dut_result"], results["model_results"])
-
-    async def process_driver_call(self, env, arg_list, kwarg_list):
-        """
-        Process the driver call.
-
-        Args:
-            env: The environment of DUT.
-            arg_list: The list of args.
-            kwarg_list: The list of kwargs.
+        Yields all driver method in the agent.
 
         Returns:
-            The result of the DUT if imme_ret is False, otherwise None.
+            A generator that yields all driver method in the agent.
         """
 
-        results = {"dut_result": None, "model_results": None}
+        for attr in dir(self):
+            if hasattr(getattr(self, attr), "__is_driver_decorated__"):
+                yield getattr(self, attr)
 
-        model_coro = self.model_exec_wrapper(
-            self.forward_to_models(env.attached_model, arg_list, kwarg_list),
-            results,
-            self.compare_results
-        )
-
-        if self.sche_order == "model_first":
-            add_priority_task(model_coro, self.priority)
-
-            results["dut_result"] = await self.func(env, *arg_list, **kwarg_list)
-            if results["model_results"] is not None:
-                self.compare_results(results["dut_result"], results["model_results"])
-
-        elif self.sche_order == "dut_first":
-            results["dut_result"] = await self.func(env, *arg_list, **kwarg_list)
-            add_priority_task(model_coro, self.priority)
-
-        return results["dut_result"]
-
-    def wrapped_func(self):
+    def __all_monitor_method(self):
         """
-        Wrap the original driver function.
+        Yields all monitor methods in the agent.
 
         Returns:
-            The wrapped driver function.
+            A generator that yields all monitor method in the agent.
         """
 
-        # In executor, we use __driver_object__ to get the driver object.
-        __driver_object__ = self
-
-        @functools.wraps(self.func)
-        async def wrapper(env, *args, **kwargs):
-            return await __driver_object__.process_driver_call(env, args, kwargs)
-        return wrapper
+        for attr in dir(self):
+            if hasattr(getattr(self, attr), "__is_monitor_decorated__"):
+                yield getattr(self, attr)
 
 
-class Monitor(BaseAgent):
+def driver_method(*, model_sync=True, match_func=False, \
+                  need_compare=False, compare_func=None, name_to_match=None, sche_order="model_first"):
     """
-    The Monitor is used to monitor the DUT and compare the output with the reference.
+    Decorator for driver method.
+
+    Args:
+        model_sync:    Whether to synchronize the driver method with the model.
+        match_func:    Whether to match the function.
+        need_compare:  Whether to compare the output with the reference.
+        compare_func:  The function to implement the comparison. If it is None, the default.
+        name_to_match: The name to match the driver method or function in the model.
+
+    Returns:
+        The decorator for driver method.
     """
 
-    def __init__(self, monitor_func, need_compare, auto_monitor, compare_func, name_to_match):
-        super().__init__(monitor_func, name_to_match, need_compare, compare_func)
+    def decorator(func):
+        driver = Driver(func, model_sync, match_func, \
+                        need_compare, compare_func, name_to_match, sche_order)
+        return driver.wrapped_func()
+    return decorator
 
-        self.compare_queue = Queue()
-        self.get_queue = Queue()
-        self.auto_monitor = auto_monitor
+def monitor_method(*, need_compare=True, auto_monitor=True, compare_func=None, name_to_match=None):
+    """
+    Decorator for monitor method.
 
-        self.env = None
-        self.comparator = None
-        self.monitor_task = None
+    Args:
+        need_compare:  Whether to compare the output with the reference.
+        auto_monitor:  Whether to monitor automatically. If True, the monitor will monitor the DUT forever in the
+                       background.
+        compare_func:  The function to implement the comparison. If it is None, the default
+                       comparison function will be used.
+        name_to_match: The name to match the monitor method.
 
-        self.func.__is_monitor_decorated__ = True
-        self.func.__need_compare__ = need_compare
+    Returns:
+        The decorator for monitor method.
+    """
 
-    def __start(self, env):
-        """
-        Start the monitor.
-
-        Args:
-            env: The environment of DUT.
-        """
-
-        self.env = env
-
-        if self.auto_monitor:
-            self.monitor_task = create_task(self.__monitor_forever())
-
-        if self.need_compare:
-            model_ports = []
-            for model in env.attached_model:
-                model_ports.append(model.get_monitor_method(self.name_to_match))
-            self.comparator = Comparator(self.compare_queue, model_ports, compare=self.compare_func, match_detail=True)
-
-    def get_queue_size(self):
-        """
-        Get the size of the get queue.
-
-        Returns:
-            The size of the get queue.
-        """
-
-        return self.get_queue.qsize()
-
-    def wrapped_func(self):
-        """
-        Wrap the original monitor function.
-
-        Returns:
-            The wrapped monitor function.
-        """
-
-        monitor = self
-
-        @functools.wraps(monitor.func)
-        async def wrapper(env, *args, **kwargs):
-            if 'config_env' in kwargs and kwargs['config_env']:
-                monitor.__start(env)
-                return
-
-            if monitor.auto_monitor:
-                return await monitor.get_queue.get()
-            else:
-                item = await monitor.func(env, *args, **kwargs)
-                await monitor.compare_queue.put(item)
-                return item
-
-        wrapper.size = self.get_queue_size
-
-        return wrapper
-
-    async def __monitor_forever(self):
-        """Monitor the DUT forever."""
-
-        while True:
-            ret = await self.func(self.env)
-            if ret is not None:
-                await self.get_queue.put(ret)
-                await self.compare_queue.put(ret)
-            await self.env.monitor_step()
+    def decorator(func):
+        monitor = Monitor(func, need_compare, auto_monitor, compare_func, name_to_match)
+        return monitor.wrapped_func()
+    return decorator
