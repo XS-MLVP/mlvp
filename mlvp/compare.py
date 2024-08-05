@@ -1,4 +1,4 @@
-from . import Component, Port
+from . import Component
 from .logger import *
 
 

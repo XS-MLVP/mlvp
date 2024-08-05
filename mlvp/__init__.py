@@ -4,13 +4,11 @@ from .asynchronous import Component
 
 from .triggers import *
 
-from .port import Port
-
 from .bundle import Bundle, WriteMode
 
 from .env import *
 from .model import *
-from .executor import *
+from .executor import Executor
 
 from . import logger
 from .logger import get_logger, setup_logging, summary
