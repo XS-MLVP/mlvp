@@ -128,6 +128,8 @@ def driver_method(*, model_sync=True, match_func=False, \
         need_compare:  Whether to compare the output with the reference.
         compare_func:  The function to implement the comparison. If it is None, the default.
         name_to_match: The name to match the driver method or function in the model.
+        sche_order:    The order to schedule the driver method. If it is "model_first", the model will be scheduled
+                       first. If it is "driver_first", the driver method will be scheduled first.
 
     Returns:
         The decorator for driver method.
