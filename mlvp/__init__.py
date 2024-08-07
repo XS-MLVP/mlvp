@@ -4,7 +4,7 @@ from .asynchronous import Component
 
 from .triggers import *
 
-from .bundle import Bundle, WriteMode
+from .bundle import Bundle, WriteMode, Signal, Signals
 
 from .model import Model, DriverMethod, MonitorMethod
 from .agent import Agent, driver_method, monitor_method
