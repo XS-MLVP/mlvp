@@ -2,8 +2,8 @@ mcv/
 ovip/
 UT_*/
 
-test/report.html
-test/report/
+tests/report.html
+tests/report/
 
 # Wave Files
 *.fst

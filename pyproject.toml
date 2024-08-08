@@ -1,0 +1,24 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mlvp"
+version = "0.1.0"
+dependencies = [
+    'pytest>=7.4.3',
+    'pytest-reporter-html1>=0.8.4',
+    'pytest-xdist>=3.5.0',
+]
+requires-python = ">=3.8"
+desciption = "Multi-Language Verification Platform"
+readme = "README.md"
+license = {file = "LICENSE"}
+keywords = ["verification", "multi-language", "platform"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+]
+
+[project.urls]
+Repository = "https://github.com/XS-MLVP/mlvp"
