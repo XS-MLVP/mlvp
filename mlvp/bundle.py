@@ -1144,7 +1144,7 @@ class Bundle(MObject):
         """
 
         path = ""
-        if signal is not "":
+        if signal != "":
             rule_stack = rule_stack + [signal]
 
         for rule in rule_stack[1:]:
