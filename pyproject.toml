@@ -18,7 +18,12 @@ keywords = ["verification", "multi-language", "platform"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Programming Language :: Python :: 3",
+    "Framework :: Pytest",
 ]
 
 [project.urls]
 Repository = "https://github.com/XS-MLVP/mlvp"
+
+[project.entry-points.pytest11]
+pytest-mlvp = "mlvp.pytest_mlvp.plugin"
+
