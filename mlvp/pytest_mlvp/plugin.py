@@ -1,4 +1,3 @@
-import os
 import pytest
 from ..reporter import process_func_coverage, process_context
 from ..reporter import get_template_dir, get_default_report_name, set_output_report
@@ -17,20 +16,29 @@ def pytest_runtest_makereport(item, call):
 def pytest_addoption(parser):
     group = parser.getgroup("reporter")
     group.addoption(
-        "--gen-report",
+        "--mlvp-report",
         action="store_true",
         default=False,
         help="Generate the report."
     )
 
+    group.addoption(
+        "--report-name",
+        action="store",
+        default=None,
+        help="The name of the report."
+    )
+
+
 @pytest.hookimpl(tryfirst=True)
 def pytest_configure(config):
-    if config.getoption("--gen-report"):
+    if config.getoption("--mlvp-report"):
         config.option.template = ["html/mlvp.html"]
         config.option.template_dir = [get_template_dir()]
 
-        default_report_name = get_default_report_name()
-        config.option.report = [default_report_name]
-        print(default_report_name)
+        report_name = config.getoption("--report-name")
+        if report_name is None:
+            report_name = get_default_report_name()
+        config.option.report = [report_name]
 
-        set_output_report(default_report_name)
+        set_output_report(report_name)
