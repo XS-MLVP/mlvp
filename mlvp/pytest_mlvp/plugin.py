@@ -42,3 +42,14 @@ def pytest_configure(config):
         config.option.report = [report_name]
 
         set_output_report(report_name)
+
+
+from .prerequest import PreRequest
+
+@pytest.fixture()
+def mlvp_pre_request(request):
+    pre_request_info = PreRequest()
+    pre_request_info.request_name = str(request._pyfuncitem).strip('<').strip('>').split(' ')[-1]
+    yield pre_request_info
+
+    pre_request_info.finish(request)
