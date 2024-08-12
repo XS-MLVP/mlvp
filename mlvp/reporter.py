@@ -6,30 +6,26 @@ import os
 import sys
 import uuid
 from collections import Counter
+from datetime import datetime
 from .funcov import CovGroup
 from .base import convert_line_coverage
 
+def get_default_report_name():
+    current_time = datetime.now().strftime("%Y%m%d%H%M%S")
+    return f"report/report-{current_time}.html"
 
 def get_template_dir():
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
 
-
 __output_report_dir__ = None
-def generate_pytest_report(report, args=["-s"]):
-    report_dir = os.path.dirname(os.path.abspath(report))
+
+def set_output_report(report_path):
+    report_dir = os.path.dirname(report_path)
     if not os.path.exists(report_dir):
         os.makedirs(report_dir)
+
     global __output_report_dir__
     __output_report_dir__ = report_dir
-    defualt_args = [
-            "--template=html/mlvp.html",
-            "--template-dir=" + get_template_dir(),
-            "--report=" + report,
-    ]
-    if args is not None:
-        defualt_args.extend(args)
-    result = pytest.main(defualt_args)
-    return result
 
 
 def __update_line_coverage__(__line_coverage__=None):
@@ -64,7 +60,7 @@ def __update_func_coverage__(__func_coverage__):
             Dict(CovGroup): list[dict]  |- Points:   list[dict] |- bins:     list[dict]  |-   hints:  int
                                                                 |                        |-   name:   str
                                                                 |- hinted:   boolean
-                                                                |- name:     str   
+                                                                |- name:     str
                                         |- name:     str
                                         |- hinted:   boolean
                                         |- bin_num_total:  int
