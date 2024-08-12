@@ -21,10 +21,11 @@ class PreRequest:
         if not isinstance(cov_groups, list):
             cov_groups = [cov_groups]
 
+        def sample_helper(cov_point):
+            return lambda _: cov_point.sample()
+
         for g in cov_groups:
-            self.dut.xclock.StepRis(
-                lambda _: g.sample()
-            )
+            self.dut.xclock.StepRis(sample_helper(g))
 
     def create_dut(self, dut_cls, clock_name=None, waveform_filename=None, coverage_filename=None):
         """
@@ -74,7 +75,7 @@ class PreRequest:
             cov_groups = [cov_groups]
         self.cov_groups.extend(cov_groups)
 
-        if self.dut is not None:
+        if self.dut is not None and periodic_sample:
             self.__add_cov_sample(cov_groups)
 
     def finish(self, request):
