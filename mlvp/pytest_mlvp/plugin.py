@@ -1,6 +1,7 @@
 import pytest
 from ..reporter import process_func_coverage, process_context
 from ..reporter import get_template_dir, get_default_report_name, set_output_report
+import os
 
 @pytest.hookimpl(trylast=True, optionalhook=True)
 def pytest_reporter_context(context, config):
@@ -29,6 +30,13 @@ def pytest_addoption(parser):
         help="The name of the report."
     )
 
+    group.addoption(
+        "--report-dir",
+        action="store",
+        default=None,
+        help="The dir of the report."
+    )
+
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_configure(config):
@@ -39,6 +47,10 @@ def pytest_configure(config):
         report_name = config.getoption("--report-name")
         if report_name is None:
             report_name = get_default_report_name()
+
+        report_dir = config.getoption("--report-dir")
+        if report_dir is not None:
+            report_name = os.path.join(report_dir, report_name)
         config.option.report = [report_name]
 
         set_output_report(report_name)
