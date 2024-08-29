@@ -635,7 +635,7 @@ class Bundle(MObject):
         return len(all_signals) == 0
 
     @classmethod
-    def from_prefix(cls, prefix=""):
+    def from_prefix(cls, prefix="", dut=None):
         """
         Create a bundle from a prefix.
 
@@ -645,8 +645,16 @@ class Bundle(MObject):
         Returns:
             A new bundle.
         """
-
         new_bundle = cls()
+        if dut is not None:
+            for attr_key in dir(dut):
+                if not attr_key.startswith(prefix):
+                    continue
+                attr_value = getattr(dut, attr_key)
+                if "XData" not in attr_value.__class__.__name__:
+                    continue
+                new_bundle.signals.append(attr_key[len(prefix):])
+            new_bundle.set_current_level_signal()
         new_bundle.__connect_method = PrefixBindMethod(prefix)
         return new_bundle
 
