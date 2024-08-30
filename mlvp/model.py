@@ -10,6 +10,8 @@ def agent_hook(agent_name: str = ""):
     """
 
     def decorator(func):
+        nonlocal agent_name
+
         if agent_name == "":
             agent_name = func.__name__
 
@@ -38,6 +40,8 @@ def driver_hook(driver_path: str = "", agent_name: str = "", driver_name: str = 
         "agent_name must not be empty when driver_name is set"
 
     def decorator(func):
+        nonlocal driver_path, agent_name, driver_name
+
         if driver_path == "":
             if agent_name == "":
                 if driver_name != "":
@@ -91,6 +95,7 @@ class Model(Component):
         super().__init__()
         self.attached_agent = None
 
+        self.all_agent_ports = []
         self.all_driver_ports = []
         self.all_monitor_ports = []
         self.all_driver_hooks = []
@@ -103,6 +108,7 @@ class Model(Component):
         Collect all driver ports, monitor ports, driver hooks, and agent hooks.
         """
 
+        self.all_agent_ports.clear()
         self.all_driver_ports.clear()
         self.all_monitor_ports.clear()
         self.all_driver_hooks.clear()
@@ -119,11 +125,13 @@ class Model(Component):
                     self.all_driver_ports.append(attr_value)
                 elif isinstance(attr_value, MonitorPort):
                     self.all_monitor_ports.append(attr_value)
+                elif isinstance(attr_value, AgentPort):
+                    self.all_agent_ports.append(attr_value)
 
-            elif callable(attr_value) and getattr(attr_value, "__is_driver_hook__"):
+            elif callable(attr_value) and hasattr(attr_value, "__is_driver_hook__"):
                 self.all_driver_hooks.append(attr_value)
 
-            elif callable(attr_value) and getattr(attr_value, "__is_agent_hook__"):
+            elif callable(attr_value) and hasattr(attr_value, "__is_agent_hook__"):
                 self.all_agent_hooks.append(attr_value)
 
     def is_attached(self):
@@ -180,6 +188,15 @@ class Model(Component):
         for driver_hook in self.all_driver_hooks:
             if driver_hook.__driver_path__ == driver_path:
                 return driver_hook
+
+    def get_agent_port(self, name: str):
+        """
+        Get the agent port by name.
+        """
+
+        for agent_port in self.all_agent_ports:
+            if agent_port.name == name:
+                return agent_port
 
     def get_agent_hook(self, name: str):
         """

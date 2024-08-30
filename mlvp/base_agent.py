@@ -17,7 +17,7 @@ class BaseAgent:
             self.name_to_match = self.name
 
         func.__name_to_match__ = self.name_to_match
-
+        func.__attached_model_infos__ = {}
 
 class Driver(BaseAgent):
     """
