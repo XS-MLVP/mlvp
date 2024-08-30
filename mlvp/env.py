@@ -93,7 +93,7 @@ class Env(MObject):
         }
 
         if not detected:
-            driver_method.__attached_model_infos__[model] = model_info
+            driver_method.__driver__.model_infos[model] = model_info
 
     def __inject_monitor_method(self, model: Model, agent_name, monitor_method, detected):
         """
@@ -107,7 +107,7 @@ class Env(MObject):
         }
 
         if not detected:
-            monitor_method.__attached_model_infos__[model] = model_info
+            monitor_method.__monitor__.model_infos[model] = model_info
 
     def __inject_all(self, model, detected):
         """

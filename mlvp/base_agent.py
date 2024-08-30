@@ -12,12 +12,12 @@ class BaseAgent:
         self.name_to_match = name_to_match
         self.need_compare = need_compare
         self.compare_func = compare_func
+        self.model_infos = {}
 
         if self.name_to_match is None:
             self.name_to_match = self.name
 
         func.__name_to_match__ = self.name_to_match
-        func.__attached_model_infos__ = {}
 
 class Driver(BaseAgent):
     """
@@ -63,12 +63,12 @@ class Driver(BaseAgent):
         del arguments["self"]
         return arguments
 
-    async def __drive_single_model(self, model, arg_list, kwarg_list):
+    async def __drive_single_model(self, model_info, arg_list, kwarg_list):
         """
         Drive a single model.
 
         Args:
-            model: The model to be driven.
+            model_info: The model information.
             arg_list: The list of args.
             kwarg_list: The list of kwargs.
 
@@ -76,35 +76,42 @@ class Driver(BaseAgent):
             The result of the model.
         """
 
-        if self.match_func:
-            target = model.get_driver_func(self.name_to_match)
+        if model_info["agent_port"] is not None:
+            args_dict = self.__get_args_dict(arg_list, kwarg_list)
 
-            if target is None:
-                critical(f"Model {model} does not have driver function \
-                            {self.name_to_match}")
+            await model_info["agent_port"].put({
+                "name": self.name,
+                "args": args
+            })
 
+        if model_info["driver_port"] is not None:
+            args_dict = self.__get_args_dict(arg_list, kwarg_list)
+            args = next(iter(args_dict.values())) if len(args_dict) == 1 else args_dict
+
+            await model_info["driver_port"].put(args)
+
+        if model_info["driver_hook"] is not None:
+            target = model_info["driver_hook"]
             if inspect.iscoroutinefunction(target):
                 result = await target(*arg_list, **kwarg_list)
             else:
                 result = target(*arg_list, **kwarg_list)
-
             return result
-        else:
-            target = model.get_driver_method(self.name_to_match)
-            if target is not None:
-                args_dict = self.__get_args_dict(arg_list, kwarg_list)
-                args = next(iter(args_dict.values())) if len(args_dict) == 1 else args_dict
-                await target.put(args)
-            else:
-                critical(f"Model {model} does not have driver method \
-                            {self.name_to_match}")
 
-    async def forward_to_models(self, models, arg_list, kwarg_list):
+        if model_info["agent_hook"] is not None:
+            target = model_info["agent_hook"]
+            args_dict = self.__get_args_dict(arg_list, kwarg_list)
+            if inspect.iscoroutinefunction(target):
+                result = await target(self.name, args_dict)
+            else:
+                result = target(self.name, args_dict)
+            return result
+
+    async def forward_to_models(self, arg_list, kwarg_list):
         """
         Forward the item to the models.
 
         Args:
-            models: The models to be forwarded to.
             arg_list: The list of args.
             kwarg_list: The list of kwargs.
         """
@@ -113,8 +120,8 @@ class Driver(BaseAgent):
             return
 
         results = []
-        for model in models:
-            results.append(await self.__drive_single_model(model, arg_list, kwarg_list))
+        for model_info in self.model_infos.values():
+            results.append(await self.__drive_single_model(model_info, arg_list, kwarg_list))
 
         return results
 
@@ -144,7 +151,6 @@ class Driver(BaseAgent):
         Process the driver call.
 
         Args:
-            agent: The agent of DUT.
             arg_list: The list of args.
             kwarg_list: The list of kwargs.
 
@@ -155,7 +161,7 @@ class Driver(BaseAgent):
         results = {"dut_result": None, "model_results": None}
 
         model_coro = self.model_exec_wrapper(
-            self.forward_to_models(agent.attached_model, arg_list, kwarg_list),
+            self.forward_to_models(arg_list, kwarg_list),
             results,
             self.compare_results
         )
