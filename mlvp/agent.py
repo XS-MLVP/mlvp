@@ -13,84 +13,11 @@ class Agent:
                           each step.
         """
 
-        self.attached_model = []
-
         self.monitor_step = monitor_step
 
         # Env will assign self to all monitor methods
         for monitor_func in self.__all_monitor_method():
             create_task(monitor_func(self, config_agent=True))
-
-    def attach(self, model):
-        """
-        Attach a model to the agent.
-
-        Args:
-            model: The model to be attached.
-
-        Returns:
-            The agent itself.
-        """
-
-        self.__ensure_model_match(model)
-        if model.is_attached():
-            warning(f"Model {model} is already attached to an agent, the original agent will be replaced")
-            model.attached_agent = None
-
-        self.attached_model.append(model)
-
-        return self
-
-    def unattach(self, model):
-        """
-        Unattach a model from the agent.
-
-        Args:
-            model: The model to be unattached.
-
-        Returns:
-            The agentitself.
-        """
-
-        if model in self.attached_model:
-            self.attached_model.remove(model)
-            model.attached_agent = None
-        else:
-            error(f"Model {model} is not attached to the agent")
-
-        return self
-
-    def __ensure_model_match(self, model):
-        """
-        Make sure the model matches the agent.
-
-        Args:
-            model: The model to be checked.
-
-        Raises:
-            ValueError: If the model does not match the agent.
-        """
-
-        if not isinstance(model, Model):
-            raise ValueError(f"Model {model} is not an instance of Model")
-
-        for driver_method in self.__all_driver_method():
-            if not driver_method.__is_model_sync__:
-                continue
-
-            if driver_method.__is_match_func__:
-                if not model.get_driver_func(driver_method.__name_to_match__):
-                    raise ValueError(f"Model {model} does not have driver function {driver_method.__name_to_match__}")
-            else:
-                if not model.get_driver_method(driver_method.__name_to_match__):
-                    raise ValueError(f"Model {model} does not have driver method {driver_method.__name_to_match__}")
-
-        for monitor_method in self.__all_monitor_method():
-            if not monitor_method.__need_compare__:
-                continue
-
-            if not model.get_monitor_method(monitor_method.__name_to_match__):
-                raise ValueError(f"Model {model} does not have monitor method {monitor_method.__name_to_match__}")
 
     def __all_driver_method(self):
         """
