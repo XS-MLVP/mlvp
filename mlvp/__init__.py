@@ -15,6 +15,8 @@ from .logger import INFO, DEBUG, WARNING, ERROR, CRITICAL
 from .env import Env
 from .executor import Executor
 
+from .pytest_mlvp import PreRequest
+
 
 """
 The triggers module privides trigger functions that are used to wait for a specific condition about clock event.

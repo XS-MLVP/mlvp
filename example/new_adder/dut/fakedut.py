@@ -19,3 +19,6 @@ class FakeDUT:
     def Step(self, cycles=1):
         for _ in range(cycles):
             self.eval()
+
+    def Finish(self):
+        ...

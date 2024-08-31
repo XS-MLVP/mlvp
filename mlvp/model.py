@@ -23,7 +23,7 @@ def agent_hook(agent_name: str = ""):
 
     return decorator
 
-def driver_hook(driver_path: str = "", agent_name: str = "", driver_name: str = ""):
+def driver_hook(driver_path: str = "", *, agent_name: str = "", driver_name: str = ""):
     """
     Decorator for driver hook.
 
@@ -33,7 +33,7 @@ def driver_hook(driver_path: str = "", agent_name: str = "", driver_name: str = 
         driver_name: The name of the driver to be hooked.
     """
 
-    assert driver_path != "" or (agent_name == "" and driver_name == ""), \
+    assert driver_path == "" or (agent_name == "" and driver_name == ""), \
         "agent_name and driver_name must be empty when driver_path is set"
 
     assert agent_name != "" or driver_name == "", \
@@ -43,11 +43,11 @@ def driver_hook(driver_path: str = "", agent_name: str = "", driver_name: str = 
         nonlocal driver_path, agent_name, driver_name
 
         if driver_path == "":
-            if agent_name == "":
+            if agent_name != "":
                 if driver_name != "":
-                    driver_path = f"{driver_path}.{driver_name}"
+                    driver_path = f"{agent_name}.{driver_name}"
                 else:
-                    driver_path = f"{driver_path}.{func.__name__}"
+                    driver_path = f"{agent_name}.{func.__name__}"
             else:
                 driver_path = func.__name__.replace("_", ".")
 
@@ -228,10 +228,8 @@ class Model(Component):
         """
 
         for agent_hook in self.all_agent_hooks:
-            print(dir(agent_hook))
             if agent_hook.__agent_name__ == name:
                 if mark_matched:
-                    print(agent_hook.__agent_name__)
                     agent_hook.__matched__[0] = True
                 return agent_hook
 
