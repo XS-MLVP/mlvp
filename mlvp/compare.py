@@ -11,7 +11,7 @@ def compare_once(dut_item, std_item, compare=None, match_detail=False):
 
     if not compare(dut_item, std_item):
         error(f"Mismatch\n----- STDOUT -----\n{std_item}\n----- DUTOUT -----\n{dut_item}\n------------------")
-        return False
+        assert False, f"mismatch: {dut_item} != {std_item}"
     else:
         if match_detail:
             info(f"Match\n----- STDOUT -----\n{std_item}\n----- DUTOUT -----\n{dut_item}\n------------------")

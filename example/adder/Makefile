@@ -1,14 +1,14 @@
 WORK_DIR = $(shell pwd)/src
 PYTHON 	= python3
 PICKER 	= picker
-NAME	= Adder_32bits
+NAME	= Adder
 
 run:
-	@mkdir report -p
-	PYTHONPATH=. $(PYTHON) $(WORK_DIR)/__init__.py
+	pytest --mlvp-report -sv .
 
-picker:
-	$(PICKER)  adder.v -l python -S $(NAME) -t build/  --sim verilator -w $(NAME).vcd -c
+dut:
+	$(PICKER) export --autobuild=true adder.v -w Adder.fst --sname Adder --tdir picker_out_adder --lang python -e -c --sim verilator
+	cp -r picker_out_adder/UT_Adder .
 
 clean:
-	-@rm -rf report
+	rm -rf UT_Adder picker_out_adder

@@ -5,6 +5,8 @@ UT_*/
 tests/report.html
 tests/report/
 
+report/
+
 # Wave Files
 *.fst
 *.hier
