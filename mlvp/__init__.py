@@ -48,3 +48,11 @@ utils provides some useful function for verification.
 content: lfsr_64, plru, two_bits_counter
 """
 from . import utils
+
+
+"""
+The funcov module provides the coverage group class and coverage point class.
+
+content: CovGroup, Eq, Ne, Gt, Ge, Lt, Le, In, NotIn, IsInRange
+"""
+from . import funcov

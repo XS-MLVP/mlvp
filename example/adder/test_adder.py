@@ -1,13 +1,10 @@
 import pytest
-import random
-import mlvp
-from mlvp import PreRequest
-from UT_Adder import DUTAdder
-from env import AdderEnv, AdderBundle
 
 """
 Test cases
 """
+import random
+from env import AdderEnv, AdderBundle
 
 @pytest.mark.mlvp_async
 async def test_random(mlvp_request):
@@ -31,7 +28,6 @@ async def test_boundary(mlvp_request):
 """
 Coverage definition
 """
-
 import mlvp.funcov as fc
 from mlvp.reporter import CovGroup
 
@@ -51,6 +47,9 @@ def adder_cover_point(adder):
 """
 Initialize before each test
 """
+import mlvp
+from mlvp import PreRequest
+from UT_Adder import DUTAdder
 
 @pytest.fixture()
 def mlvp_request(mlvp_pre_request: PreRequest):
