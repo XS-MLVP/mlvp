@@ -90,14 +90,6 @@ class Driver(BaseAgent):
 
             await model_info["driver_port"].put(args)
 
-        if model_info["driver_hook"] is not None:
-            target = model_info["driver_hook"]
-            if inspect.iscoroutinefunction(target):
-                result = await target(*arg_list, **kwarg_list)
-            else:
-                result = target(*arg_list, **kwarg_list)
-            return result
-
         if model_info["agent_hook"] is not None:
             target = model_info["agent_hook"]
             args_dict = self.__get_args_dict(arg_list, kwarg_list)
@@ -105,6 +97,16 @@ class Driver(BaseAgent):
                 result = await target(self.name, args_dict)
             else:
                 result = target(self.name, args_dict)
+
+            if model_info["driver_hook"] is None:
+                return result
+
+        if model_info["driver_hook"] is not None:
+            target = model_info["driver_hook"]
+            if inspect.iscoroutinefunction(target):
+                result = await target(*arg_list, **kwarg_list)
+            else:
+                result = target(*arg_list, **kwarg_list)
             return result
 
     async def forward_to_models(self, arg_list, kwarg_list):
@@ -233,8 +235,8 @@ class Monitor(BaseAgent):
 
         if self.need_compare:
             model_ports = []
-            for model in agent.attached_model:
-                model_ports.append(model.get_monitor_method(self.name_to_match))
+            for model_info in agent.attached_model.values():
+                model_ports.append(model_info["monitor_port"])
             self.comparator = Comparator(self.compare_queue, model_ports, compare=self.compare_func, match_detail=True)
 
     def get_queue_size(self):
