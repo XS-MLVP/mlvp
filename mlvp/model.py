@@ -17,7 +17,7 @@ def agent_hook(agent_name: str = ""):
 
         func.__is_agent_hook__ = True
         func.__agent_name__ = agent_name
-        func.__matched__ = False
+        func.__matched__ = [False]
 
         return func
 
@@ -53,7 +53,7 @@ def driver_hook(driver_path: str = "", agent_name: str = "", driver_name: str = 
 
         func.__is_driver_hook__ = True
         func.__driver_path__ = driver_path
-        func.__matched__ = False
+        func.__matched__ = [False]
 
         return func
 
@@ -101,9 +101,7 @@ class Model(Component):
         self.all_driver_hooks = []
         self.all_agent_hooks = []
 
-        self.__collect_all()
-
-    def __collect_all(self):
+    def collect_all(self):
         """
         Collect all driver ports, monitor ports, driver hooks, and agent hooks.
         """
@@ -134,6 +132,23 @@ class Model(Component):
             elif callable(attr_value) and hasattr(attr_value, "__is_agent_hook__"):
                 self.all_agent_hooks.append(attr_value)
 
+    def clear_matched(self):
+        """
+        Clear the matched status of all driver ports, monitor ports, driver hooks, and agent hooks.
+        """
+
+        for driver_port in self.all_driver_ports:
+            driver_port.matched = False
+
+        for monitor_port in self.all_monitor_ports:
+            monitor_port.matched = False
+
+        for driver_hook in self.all_driver_hooks:
+            driver_hook.__matched__[0] = False
+
+        for agent_hook in self.all_agent_hooks:
+            agent_hook.__matched__[0] = False
+
     def is_attached(self):
         """
         Check if the model is attached to an agent.
@@ -141,70 +156,83 @@ class Model(Component):
 
         return self.attached_agent is not None
 
-    def check_unmatched(self):
+    def ensure_all_matched(self):
         """
-        Check if all driver hooks and agent hooks are matched.
+        Ensure all driver ports, monitor ports, driver hooks, and agent hooks are matched.
         """
 
         for driver_hook in self.all_driver_hooks:
-            if not driver_hook.__matched__:
-                warning(f"Driver hook {driver_hook.__driver_path__} is not matched")
+            if not driver_hook.__matched__[0]:
+                raise ValueError(f"Driver hook {driver_hook.__driver_path__} is not matched")
 
         for agent_hook in self.all_agent_hooks:
-            if not agent_hook.__matched__:
-                warning(f"Agent hook {agent_hook.__agent_name__} is not matched")
+            if not agent_hook.__matched__[0]:
+                raise ValueError(f"Agent hook {agent_hook.__agent_name__} is not matched")
 
         for driver_port in self.all_driver_ports:
             if not driver_port.matched:
-                warning(f"Driver port {driver_port.name} is not matched")
+                raise ValueError(f"Driver port {driver_port.name} is not matched")
 
         for monitor_port in self.all_monitor_ports:
             if not monitor_port.matched:
-                warning(f"Monitor port {monitor_port.name} is not matched")
+                raise ValueError(f"Monitor port {monitor_port.name} is not matched")
 
-    def get_driver_port(self, name: str):
+
+    def get_driver_port(self, name: str, mark_matched: bool = False):
         """
         Get the driver port by name.
         """
 
         for driver_port in self.all_driver_ports:
             if driver_port.name == name:
+                if mark_matched:
+                    driver_port.matched = True
                 return driver_port
 
-    def get_monitor_port(self, name: str):
+    def get_monitor_port(self, name: str, mark_matched: bool = False):
         """
         Get the monitor port by name.
         """
 
         for monitor_port in self.all_monitor_ports:
             if monitor_port.name == name:
+                if mark_matched:
+                    monitor_port.matched = True
                 return monitor_port
 
-    def get_driver_hook(self, driver_path: str):
+    def get_driver_hook(self, driver_path: str, mark_matched: bool = False):
         """
         Get the driver hook by name.
         """
 
         for driver_hook in self.all_driver_hooks:
             if driver_hook.__driver_path__ == driver_path:
+                if mark_matched:
+                    driver_hook.__matched__[0] = True
                 return driver_hook
 
-    def get_agent_port(self, name: str):
+    def get_agent_port(self, name: str, mark_matched: bool = False):
         """
         Get the agent port by name.
         """
 
         for agent_port in self.all_agent_ports:
             if agent_port.name == name:
+                if mark_matched:
+                    agent_port.__matched__[0] = True
                 return agent_port
 
-    def get_agent_hook(self, name: str):
+    def get_agent_hook(self, name: str, mark_matched: bool = False):
         """
         Get the agent hook by name.
         """
 
         for agent_hook in self.all_agent_hooks:
+            print(dir(agent_hook))
             if agent_hook.__agent_name__ == name:
+                if mark_matched:
+                    print(agent_hook.__agent_name__)
+                    agent_hook.__matched__[0] = True
                 return agent_hook
 
     async def main(self):
