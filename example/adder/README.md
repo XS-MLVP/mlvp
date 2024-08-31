@@ -1,12 +1,15 @@
 # 一个简单的加法器示例
 
 ## 运行方法
-使用picker在`build`目录下生成dut封装：  
+
+编译 DUT：
+
 ```bash
-    make picker
+    make dut
 ```
 
-运行测试：  
+运行测试：
+
 ```bash
     make run
 ```
