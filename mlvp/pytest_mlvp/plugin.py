@@ -1,7 +1,13 @@
 import pytest
+import inspect
 from ..reporter import process_func_coverage, process_context
 from ..reporter import get_template_dir, get_default_report_name, set_output_report
+from .. import run
 import os
+
+"""
+mlvp report
+"""
 
 @pytest.hookimpl(trylast=True, optionalhook=True)
 def pytest_reporter_context(context, config):
@@ -55,6 +61,29 @@ def pytest_configure(config):
 
         set_output_report(report_name)
 
+"""
+mlvp async test
+"""
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "mlvp_async: mark test to run with mlvp's event loop")
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_pyfunc_call(pyfuncitem):
+    if "mlvp_async" in pyfuncitem.keywords:
+        func = pyfuncitem.obj
+        assert inspect.iscoroutinefunction(func), "test marked with mlvp_async must be a coroutine function"
+
+        signature = inspect.signature(func)
+        filtered_funcargs = {
+            k: v for k, v in pyfuncitem.funcargs.items() if k in signature.parameters
+        }
+
+        run(func(**filtered_funcargs))
+
+        return True
+
+    return None
 
 from .prerequest import PreRequest
 

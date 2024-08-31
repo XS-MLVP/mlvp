@@ -8,16 +8,12 @@ This section implements specific asynchronous event requirements to meet the clo
 Specifically, we need to complete all executable tasks before the next clock event arrives.
 """
 
-# Flags whether new tasks have been run in this round
-new_task_run = False
-
 def task_run():
     """
     Set the flag to indicate that a new task has been run.
     """
 
-    global new_task_run
-    new_task_run = True
+    asyncio.get_event_loop().new_task_run = True
 
 def __has_unwait_task():
     """
@@ -39,9 +35,8 @@ async def __run_once():
     The event loop executes one round.
     """
 
-    global new_task_run
+    asyncio.get_event_loop().new_task_run = False
 
-    new_task_run = False
     await asyncio.sleep(0)
 
 async def __other_tasks_done():
@@ -50,9 +45,8 @@ async def __other_tasks_done():
     can be executed.
     """
 
-    global new_task_run
     await __run_once()
-    while __has_unwait_task() or new_task_run:
+    while __has_unwait_task() or asyncio.get_event_loop().new_task_run:
         await __run_once()
 
 class Event(asyncio.Event):
@@ -120,8 +114,6 @@ async def __clock_loop(dut):
     The clock loop function, which is the main loop of the asynchronous event.
     """
 
-    global new_task_run
-
     while True:
         await __other_tasks_done()
         await __execute_callback()
@@ -132,15 +124,13 @@ async def __clock_loop(dut):
 create_task = asyncio.create_task
 
 
-# When start_clock is called, global_clock_event points to the clock event in the dut
-global_clock_event = None
-
 def start_clock(dut):
     """
     Start a clock loop on a DUT.
     """
-    global global_clock_event
-    global_clock_event = dut.event
+    # When start_clock is called, global_clock_event points to the clock event in the dut
+    loop = asyncio.get_event_loop()
+    loop.global_clock_event = dut.event
 
     task = create_task(__clock_loop(dut))
     task.set_name("__clock_loop")
@@ -165,11 +155,14 @@ async def main_coro(coro):
     Run the main coroutine.
     """
 
+    asyncio.get_event_loop().new_task_run = False
+
     ret = await coro
 
     # Wait for the last clock event to complete all outstanding tasks during the period
-    if global_clock_event is not None:
-        await global_clock_event.wait()
+    loop = asyncio.get_event_loop()
+    if hasattr(loop, "global_clock_event"):
+        await loop.global_clock_event.wait()
 
     return ret
 
