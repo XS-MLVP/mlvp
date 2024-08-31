@@ -210,6 +210,7 @@ class Monitor(BaseAgent):
         self.comparator = None
         self.monitor_task = None
 
+        self.func.__monitor__ = self
         self.func.__is_monitor_decorated__ = True
         self.func.__need_compare__ = True
 

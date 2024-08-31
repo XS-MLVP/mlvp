@@ -152,7 +152,7 @@ class Env(MObject):
 
     def __ensure_single_driver_match(self, driver, model):
         """
-        Make sure the driver is matched corif rectly to model.
+        Make sure the driver is matched correctly to model.
         """
 
         model_info = driver.model_infos[model]
@@ -183,7 +183,7 @@ class Env(MObject):
             and model_info.get("driver_hook") is None \
             and model_info.get("agent_port") is None \
             and model_info.get("driver_port") is None:
-            raise ValueError(f"Driver Method \"{driver.__name__}\" is not matched to any port or hook in model")
+            raise ValueError(f"Driver Method \"{driver.name}\" is not matched to any port or hook in model")
 
     def __ensure_env_driver_match(self, model):
         """

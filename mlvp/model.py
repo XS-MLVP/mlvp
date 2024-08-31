@@ -273,7 +273,7 @@ class Model(Component):
         for agent_port in self.all_agent_ports:
             if agent_port.name == name:
                 if mark_matched:
-                    agent_port.__matched__[0] = True
+                    agent_port.matched = True
                 return agent_port
 
     def get_agent_hook(self, name: str, mark_matched: bool = False):

@@ -4,10 +4,12 @@ sys.path.append("../")
 import mlvp
 from mlvp import Bundle
 
+class FakeXData:
+    ...
 
 class FakePin:
     def __init__(self):
-        self.xdata, self.event, self.value, self.mIOType = None, None, None, 0
+        self.xdata, self.event, self.value, self.mIOType = FakeXData(), None, None, 0
 
 class FakeDUT:
     def __init__(self):
