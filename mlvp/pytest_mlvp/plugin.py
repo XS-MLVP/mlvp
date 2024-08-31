@@ -46,6 +46,8 @@ def pytest_addoption(parser):
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_configure(config):
+    config.addinivalue_line("markers", "mlvp_async: mark test to run with mlvp's event loop")
+
     if config.getoption("--mlvp-report"):
         config.option.template = ["html/mlvp.html"]
         config.option.template_dir = [get_template_dir()]
@@ -64,9 +66,6 @@ def pytest_configure(config):
 """
 mlvp async test
 """
-
-def pytest_configure(config):
-    config.addinivalue_line("markers", "mlvp_async: mark test to run with mlvp's event loop")
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_pyfunc_call(pyfuncitem):
