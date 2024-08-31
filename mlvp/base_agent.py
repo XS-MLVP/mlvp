@@ -6,18 +6,12 @@ from .executor import add_priority_task
 from .logger import critical
 
 class BaseAgent:
-    def __init__(self, func, name_to_match: str, need_compare, compare_func):
+    def __init__(self, func, need_compare, compare_func):
         self.func = func
         self.name = func.__name__
-        self.name_to_match = name_to_match
         self.need_compare = need_compare
         self.compare_func = compare_func
         self.model_infos = {}
-
-        if self.name_to_match is None:
-            self.name_to_match = self.name
-
-        func.__name_to_match__ = self.name_to_match
 
 class Driver(BaseAgent):
     """
@@ -25,24 +19,16 @@ class Driver(BaseAgent):
     the reference model.
     """
 
-    def __init__(self, drive_func, model_sync, match_func, \
-                  need_compare, compare_func, name_to_match, sche_order):
-        super().__init__(drive_func, name_to_match, need_compare, compare_func)
+    def __init__(self, drive_func, sche_order, priority):
+        super().__init__(drive_func, True, None)
 
-        self.model_sync = model_sync
-        self.match_func = match_func
+        self.model_sync = True
         self.sche_order = sche_order
-
-        self.priority = 99
-
-        assert model_sync or not need_compare, "need_compare can be true only if model_sync is true"
-        assert match_func or not need_compare, "need_compare can be true only if match_func is true"
-        assert need_compare or compare_func is None, "compare_func takes effect only if need_compare is true"
+        self.priority = priority
 
         self.func.__driver__ = self
         self.func.__is_driver_decorated__ = True
-        self.func.__is_match_func__ = match_func
-        self.func.__is_model_sync__ = model_sync
+        self.func.__is_model_sync__ = True
 
     def __get_args_dict(self, arg_list, kwarg_list):
         """
@@ -206,19 +192,19 @@ class Monitor(BaseAgent):
     The Monitor is used to monitor the DUT and compare the output with the reference.
     """
 
-    def __init__(self, monitor_func, need_compare, auto_monitor, compare_func, name_to_match):
-        super().__init__(monitor_func, name_to_match, need_compare, compare_func)
+    def __init__(self, monitor_func):
+        super().__init__(monitor_func, True, None)
 
         self.compare_queue = Queue()
         self.get_queue = Queue()
-        self.auto_monitor = auto_monitor
+        self.auto_monitor = True
 
         self.agent = None
         self.comparator = None
         self.monitor_task = None
 
         self.func.__is_monitor_decorated__ = True
-        self.func.__need_compare__ = need_compare
+        self.func.__need_compare__ = True
 
     def __start(self, agent):
         """

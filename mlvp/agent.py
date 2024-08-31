@@ -62,47 +62,33 @@ class Agent:
                 return monitor_method
 
 
-def driver_method(*, model_sync=True, match_func=False, \
-                  need_compare=False, compare_func=None, name_to_match=None, sche_order="model_first"):
+def driver_method(*, sche_order="model_first", model_priority=99):
     """
     Decorator for driver method.
 
     Args:
-        model_sync:    Whether to synchronize the driver method with the model.
-        match_func:    Whether to match the function.
-        need_compare:  Whether to compare the output with the reference.
-        compare_func:  The function to implement the comparison. If it is None, the default.
-        name_to_match: The name to match the driver method or function in the model.
-        sche_order:    The order to schedule the driver method. If it is "model_first", the model will be scheduled
-                       first. If it is "driver_first", the driver method will be scheduled first.
+        sche_order:     The order to schedule the driver method. It can be "model_first" or "driver_first".
+        model_priority: The default priority to call the model. When multiple model hook calls occur in a cycle, the
+                        one with the lowest priority value is called first
 
     Returns:
         The decorator for driver method.
     """
 
     def decorator(func):
-        driver = Driver(func, model_sync, match_func, \
-                        need_compare, compare_func, name_to_match, sche_order)
+        driver = Driver(func, sche_order, model_priority)
         return driver.wrapped_func()
     return decorator
 
-def monitor_method(*, need_compare=True, auto_monitor=True, compare_func=None, name_to_match=None):
+def monitor_method():
     """
     Decorator for monitor method.
-
-    Args:
-        need_compare:  Whether to compare the output with the reference.
-        auto_monitor:  Whether to monitor automatically. If True, the monitor will monitor the DUT forever in the
-                       background.
-        compare_func:  The function to implement the comparison. If it is None, the default
-                       comparison function will be used.
-        name_to_match: The name to match the monitor method.
 
     Returns:
         The decorator for monitor method.
     """
 
     def decorator(func):
-        monitor = Monitor(func, need_compare, auto_monitor, compare_func, name_to_match)
+        monitor = Monitor(func)
         return monitor.wrapped_func()
     return decorator
