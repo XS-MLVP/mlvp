@@ -1,5 +1,6 @@
 import sys
 import asyncio
+from .logger import summary
 from .bundle import Bundle
 
 """Asynchronous event definition
@@ -163,6 +164,8 @@ async def main_coro(coro):
     loop = asyncio.get_event_loop()
     if hasattr(loop, "global_clock_event"):
         await loop.global_clock_event.wait()
+
+    summary()
 
     return ret
 

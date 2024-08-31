@@ -3,7 +3,7 @@ import inspect
 from .compare import Comparator, compare_once
 from .asynchronous import create_task, Queue
 from .executor import add_priority_task
-from .logger import critical
+from .logger import info, warning
 
 class BaseAgent:
     def __init__(self, func, need_compare, compare_func):
@@ -126,7 +126,14 @@ class Driver(BaseAgent):
             return
 
         for model_result in model_results:
-            compare_once(dut_result, model_result, self.compare_func, match_detail=True)
+            if model_result is not None and dut_result is None:
+                warning(f"The model result is {model_result}, but the DUT result is None.")
+
+            elif model_result is None and dut_result is not None:
+                warning(f"The dut result is {dut_result}, but the model result is None.")
+
+            elif model_result is not None and dut_result is not None:
+                compare_once(dut_result, model_result, self.compare_func, match_detail=True)
 
     async def model_exec_wrapper(self, model_coro, results, compare_func):
         results["model_results"] = await model_coro

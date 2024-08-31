@@ -140,8 +140,8 @@ def summary():
     summary_str += "* Report counts by severity\n"
     for k, v in stats_handler.serverity_stats.items():
         summary_str += f"{k}:\t{v}\n"
-    summary_str += "* Report counts by id\n"
-    for k, v in stats_handler.id_stats.items():
-        summary_str += f"{k}:\t{v}\n"
+    # summary_str += "* Report counts by id\n"
+    # for k, v in stats_handler.id_stats.items():
+    #     summary_str += f"{k}:\t{v}\n"
 
     mlvp_logger.info(summary_str)
