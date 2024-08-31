@@ -49,7 +49,7 @@ def driver_hook(driver_path: str = "", *, agent_name: str = "", driver_name: str
                 else:
                     driver_path = f"{agent_name}.{func.__name__}"
             else:
-                driver_path = func.__name__.replace("_", ".")
+                driver_path = func.__name__.replace("__", ".")
 
         func.__is_driver_hook__ = True
         func.__driver_path__ = driver_path
@@ -71,10 +71,37 @@ class DriverPort(Port):
     A The DriverPort is used to match the DriverPort of the agent, and it is used to accept requests from the agent.
     """
 
+    def __init__(self, driver_path: str = "", *, agent_name: str = "", driver_name: str = ""):
+        super().__init__()
+
+        assert driver_path == "" or (agent_name == "" and driver_name == ""), \
+            "agent_name and driver_name must be empty when driver_path is set"
+
+        assert agent_name != "" or driver_name == "", \
+            "agent_name must not be empty when driver_name is set"
+
+        self.driver_path = driver_path
+        self.agent_name = agent_name
+        self.driver_name = driver_name
+
+    def get_path(self):
+        """Get the driver path."""
+
+        if self.driver_path == "":
+            if self.agent_name != "":
+                if self.driver_name != "":
+                    self.driver_path = f"{self.agent_name}.{self.driver_name}"
+                else:
+                    self.driver_path = f"{self.agent_name}.{self.name}"
+            else:
+                self.driver_path = self.name.replace("__", ".")
+
+        return self.driver_path
+
     async def __call__(self):
         return await self.get()
 
-class AgentPort(DriverPort):
+class AgentPort(Port):
     ...
 
 class MonitorPort(Port):
@@ -82,6 +109,33 @@ class MonitorPort(Port):
     The MonitorPort is used to match the MonitorPort in the agent, and it is used for the Model to send the results
     out and compare them with the results in the agent.
     """
+
+    def __init__(self, monitor_path: str = "", *, agent_name: str = "", monitor_name: str = ""):
+        super().__init__()
+
+        assert monitor_path == "" or (agent_name == "" and monitor_name == ""), \
+            "agent_name and monitor_name must be empty when monitor_path is set"
+
+        assert agent_name != "" or monitor_name == "", \
+            "agent_name must not be empty when monitor_name is set"
+
+        self.monitor_path = monitor_path
+        self.agent_name = agent_name
+        self.monitor_name = monitor_name
+
+    def get_path(self):
+        """Get the monitor path."""
+
+        if self.monitor_path == "":
+            if self.agent_name != "":
+                if self.monitor_name != "":
+                    self.monitor_path = f"{self.agent_name}.{self.monitor_name}"
+                else:
+                    self.monitor_path = f"{self.agent_name}.{self.name}"
+            else:
+                self.monitor_path = self.name.replace("__", ".")
+
+        return self.monitor_path
 
     async def __call__(self, item):
         return await self.put(item)
@@ -171,31 +225,31 @@ class Model(Component):
 
         for driver_port in self.all_driver_ports:
             if not driver_port.matched:
-                raise ValueError(f"Driver port {driver_port.name} is not matched")
+                raise ValueError(f"Driver port {driver_port.get_path()} is not matched")
 
         for monitor_port in self.all_monitor_ports:
             if not monitor_port.matched:
-                raise ValueError(f"Monitor port {monitor_port.name} is not matched")
+                raise ValueError(f"Monitor port {monitor_port.get_path()} is not matched")
 
 
-    def get_driver_port(self, name: str, mark_matched: bool = False):
+    def get_driver_port(self, drive_path: str, mark_matched: bool = False):
         """
         Get the driver port by name.
         """
 
         for driver_port in self.all_driver_ports:
-            if driver_port.name == name:
+            if driver_port.get_path() == drive_path:
                 if mark_matched:
                     driver_port.matched = True
                 return driver_port
 
-    def get_monitor_port(self, name: str, mark_matched: bool = False):
+    def get_monitor_port(self, monitor_path: str, mark_matched: bool = False):
         """
         Get the monitor port by name.
         """
 
         for monitor_port in self.all_monitor_ports:
-            if monitor_port.name == name:
+            if monitor_port.get_path() == monitor_path:
                 if mark_matched:
                     monitor_port.matched = True
                 return monitor_port
