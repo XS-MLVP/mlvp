@@ -65,10 +65,7 @@ class Driver(BaseAgent):
         if model_info["agent_port"] is not None:
             args_dict = self.__get_args_dict(arg_list, kwarg_list)
 
-            await model_info["agent_port"].put({
-                "name": self.name,
-                "args": args
-            })
+            await model_info["agent_port"].put((self.name, args_dict))
 
         if model_info["driver_port"] is not None:
             args_dict = self.__get_args_dict(arg_list, kwarg_list)
