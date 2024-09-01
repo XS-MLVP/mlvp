@@ -11,4 +11,4 @@ dut:
 	cp -r picker_out_adder/UT_Adder .
 
 clean:
-	rm -rf UT_Adder picker_out_adder report
+	rm -rf UT_Adder picker_out_adder reports

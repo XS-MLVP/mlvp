@@ -12,7 +12,7 @@ from .base import convert_line_coverage
 
 def get_default_report_name():
     current_time = datetime.now().strftime("%Y%m%d%H%M%S")
-    return f"report/report-{current_time}.html"
+    return f"report-{current_time}/report-{current_time}.html"
 
 def get_template_dir():
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
