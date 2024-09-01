@@ -8,20 +8,22 @@ Priority Task Execution
 
 __priority_tasks = []
 
-def add_priority_task(coro, priority):
+def add_priority_task(coro, priority, done_event):
     """
     Add a priority task to the priority task list.
     """
 
-    __priority_tasks.append((coro, priority))
+    __priority_tasks.append((coro, priority, done_event))
 
 async def __execute_priority_tasks():
     """
     Execute the priority tasks in the priority task list. It will be called every clock cycle.
     """
 
-    for coro, _ in sorted(__priority_tasks, key=lambda x: x[1]):
+    for coro, _, done_event in sorted(__priority_tasks, key=lambda x: x[1]):
         await coro
+        done_event.set()
+
     __priority_tasks.clear()
 
 add_callback(__execute_priority_tasks)

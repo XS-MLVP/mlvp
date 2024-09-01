@@ -1,7 +1,7 @@
 import functools
 import inspect
 from .compare import Comparator, compare_once
-from .asynchronous import create_task, Queue
+from .asynchronous import create_task, Queue, Event
 from .executor import add_priority_task
 from .logger import info, warning
 
@@ -23,7 +23,7 @@ class Driver(BaseAgent):
         super().__init__(drive_func, True, None)
 
         self.model_sync = True
-        self.sche_order = "model_first"
+        self.sche_order = "parallel"
         self.priority = 99
 
         self.func.__driver__ = self
@@ -158,16 +158,27 @@ class Driver(BaseAgent):
             self.compare_results
         )
 
-        if self.sche_order == "model_first":
-            add_priority_task(model_coro, self.priority)
+        if self.sche_order == "parallel":
+            model_done = Event()
+            add_priority_task(model_coro, self.priority, model_done)
 
             results["dut_result"] = await self.func(agent, *arg_list, **kwarg_list)
             if results["model_results"] is not None:
                 self.compare_results(results["dut_result"], results["model_results"])
+            await model_done.wait()
+
+        elif self.sche_order == "model_first":
+            model_done = Event()
+            add_priority_task(model_coro, self.priority, model_done)
+            await model_done.wait()
+            results["dut_result"] = await self.func(agent, *arg_list, **kwarg_list)
+            self.compare_results(results["dut_result"], results["model_results"])
 
         elif self.sche_order == "dut_first":
+            model_done = Event()
             results["dut_result"] = await self.func(agent, *arg_list, **kwarg_list)
-            add_priority_task(model_coro, self.priority)
+            add_priority_task(model_coro, self.priority, model_done)
+            await model_done.wait()
 
         else:
             raise ValueError(f"Invalid sche_order: {self.sche_order}")
