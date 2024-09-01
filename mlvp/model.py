@@ -102,7 +102,8 @@ class DriverPort(Port):
         return await self.get()
 
 class AgentPort(Port):
-    ...
+    async def __call__(self):
+        return await self.get()
 
 class MonitorPort(Port):
     """
