@@ -2,9 +2,7 @@ mcv/
 ovip/
 UT_*/
 
-tests/report.html
-tests/report/
-
+reports/
 report/
 
 # Wave Files

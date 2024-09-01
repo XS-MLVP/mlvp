@@ -1,9 +1,11 @@
+import os
 from ..reporter import set_func_coverage, set_line_coverage
 
 class PreRequest:
-    def __init__(self):
+    def __init__(self, request):
         self.dut = None
         self.args = None
+        self.request = request
         self.request_name = None
         self.cov_groups = []
 
@@ -41,8 +43,10 @@ class PreRequest:
             The DUT instance.
         """
 
-        self.waveform_filename = f"report/{dut_cls.__name__}_{self.request_name}.fst"
-        self.coverage_filename = f"report/{dut_cls.__name__}_{self.request_name}.dat"
+        report_dir = os.path.dirname(self.request.config.option.report[0])
+
+        self.waveform_filename = f"{report_dir}/{dut_cls.__name__}_{self.request_name}.fst"
+        self.coverage_filename = f"{report_dir}/{dut_cls.__name__}_{self.request_name}.dat"
 
         if waveform_filename is not None:
             self.waveform_filename = waveform_filename

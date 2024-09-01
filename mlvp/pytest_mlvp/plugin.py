@@ -57,10 +57,11 @@ def pytest_configure(config):
             report_name = get_default_report_name()
 
         report_dir = config.getoption("--report-dir")
-        if report_dir is not None:
-            report_name = os.path.join(report_dir, report_name)
-        config.option.report = [report_name]
+        if report_dir is None:
+            report_dir = "reports"
+        report_name = os.path.join(report_dir, report_name)
 
+        config.option.report = [report_name]
         set_output_report(report_name)
 
 """
@@ -88,7 +89,7 @@ from .prerequest import PreRequest
 
 @pytest.fixture()
 def mlvp_pre_request(request):
-    pre_request_info = PreRequest()
+    pre_request_info = PreRequest(request)
     pre_request_info.request_name = str(request._pyfuncitem).strip('<').strip('>').split(' ')[-1]
     yield pre_request_info
 
