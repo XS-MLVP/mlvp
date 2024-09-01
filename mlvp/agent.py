@@ -62,21 +62,16 @@ class Agent:
                 return monitor_method
 
 
-def driver_method(*, sche_order="model_first", model_priority=99):
+def driver_method():
     """
     Decorator for driver method.
-
-    Args:
-        sche_order:     The order to schedule the driver method. It can be "model_first" or "driver_first".
-        model_priority: The default priority to call the model. When multiple model hook calls occur in a cycle, the
-                        one with the lowest priority value is called first
 
     Returns:
         The decorator for driver method.
     """
 
     def decorator(func):
-        driver = Driver(func, sche_order, model_priority)
+        driver = Driver(func)
         return driver.wrapped_func()
     return decorator
 

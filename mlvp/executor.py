@@ -150,7 +150,7 @@ class Executor(MObject):
 
         return self.__results
 
-    def __call__(self, coro, priority=None, sche_group=None):
+    def __call__(self, coro, priority=None, sche_order=None, sche_group=None):
         """
         Add a coroutine to the executor.
 
@@ -177,7 +177,12 @@ class Executor(MObject):
             coro_name = coro.__name__
             assert driver is not None, f"{coro_name} is not a driver function, cannot set priority"
 
-        self.__coros[sche_group].append((coro, priority))
+        if sche_order is not None:
+            driver = Executor.get_driver(coro)
+            coro_name = coro.__name__
+            assert driver is not None, f"{coro_name} is not a driver function, cannot set sche_order"
+
+        self.__coros[sche_group].append((coro, sche_order, priority))
 
     @staticmethod
     async def sequential_execution_all(*tasks, complete_event=None):
@@ -190,14 +195,18 @@ class Executor(MObject):
         """
 
         results = []
-        for coro, priority in tasks:
+        for coro, sche_order, priority in tasks:
             driver = Executor.get_driver(coro)
 
             if driver is not None:
                 if priority is None:
                     priority = 99
 
+                if sche_order is None:
+                    sche_order = "model_first"
+
                 driver.priority = priority
+                driver.sche_order = sche_order
 
             results.append(await coro)
 

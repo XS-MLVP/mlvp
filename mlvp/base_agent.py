@@ -19,12 +19,12 @@ class Driver(BaseAgent):
     the reference model.
     """
 
-    def __init__(self, drive_func, sche_order, priority):
+    def __init__(self, drive_func):
         super().__init__(drive_func, True, None)
 
         self.model_sync = True
-        self.sche_order = sche_order
-        self.priority = priority
+        self.sche_order = "model_first"
+        self.priority = 99
 
         self.func.__driver__ = self
         self.func.__is_driver_decorated__ = True
