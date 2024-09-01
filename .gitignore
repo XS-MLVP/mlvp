@@ -5,6 +5,8 @@ UT_*/
 reports/
 report/
 
+picker_out_*/
+
 # Wave Files
 *.fst
 *.hier
