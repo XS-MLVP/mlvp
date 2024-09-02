@@ -273,7 +273,7 @@ class Bundle(MObject):
         if len(ret_data) == 1:
             ret_data = ret_data[0]
         # save return data in request
-        request["__funcs_return_"] = funcreturns
+        request["__funcs_return__"] = funcreturns
         request["__return_values__"] = ret_data
         request["__return_cycles__"] = cycle
 
@@ -312,6 +312,7 @@ class Bundle(MObject):
         for req in request:
             if isinstance(req, dict) and "__return_values__" in req:
                 ret.append({"data": req["__return_values__"], "cycle": req["__return_cycles__"]})
+                ret[-1]["__funcs_return__"] = req["__funcs_return__"]
         return ret
 
     def set_name(self, name):
