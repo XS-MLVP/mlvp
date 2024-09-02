@@ -479,7 +479,7 @@ class Bundle(MObject):
         self.bound = True
         if self.write_mode is not None:
             self.__set_all_signals_write_mode(self.write_mode)
-
+        self.make_requset_response_for(dut)
         return self
 
     def as_dict(self, multilevel=True):
