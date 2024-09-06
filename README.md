@@ -1,15 +1,12 @@
 # mlvp: multi-language verification platform
 
-**mlvp** 是一套基于 Python 的硬件验证框架，帮助用户更加方便、规范地使用 Python 建立起硬件验证环境。
+**mlvp** 是一款基于 Python 的硬件验证框架，旨在帮助用户更加便捷、规范地使用 Python 构建硬件验证环境。
 
-## 介绍
+**mlvp** 是一个使用 Python 语言编写的硬件验证框架，依托多语言转换工具 [picker](https://github.com/XS-MLVP/picker)，该工具能够将硬件设计的 Verilog 代码转换为 Python Package，使得用户可以使用 Python 来驱动并验证硬件设计。
 
-**mlvp** 是使用 Python 语言编写的一套硬件验证框架，它依赖于多语言转换工具 [picker](https://github.com/XS-MLVP/picker)，该工具能够将硬件设计的 Verilog 代码转换为 Python Package，使得用户可以使用 Python 来驱动并验证硬件设计。
+**mlvp** 吸收了部分 UVM 验证方法学，确保验证环境的规范性与可复用性。此外，mlvp 对验证环境的构建方式进行了重新设计，使其更符合软件开发者的使用习惯，从而让软件开发者能够轻松上手硬件验证工作。
 
-**mlvp** 吸收了部分 UVM 验证方法学，以保证验证环境的规范性和可复用性。并且，mlvp 重新设计了整套验证环境的搭建方式，使其更符合软件领域开发者的使用习惯，使得软件开发者可以轻易地上手硬件验证工作。
-
-更多关于 mlvp 的介绍，请参考 [mlvp 文档](https://open-verify.cc/mlvp/docs/mlvp)
-
+更多关于 mlvp 的介绍，请参阅 [mlvp 文档](https://open-verify.cc/mlvp/docs/mlvp)。
 
 ## 安装
 
@@ -54,13 +51,13 @@ assign {io_cout, io_sum}  = io_a + io_b + io_cin;
 endmodule
 ```
 
-首先使用 picker 将其转换为 Python Package，再使用 mlvp 来为其建立验证环境。安装好依赖后，可以直接在 `example/adder` 目录下运行以下命令来完成转换：
+使用 mlvp 搭建验证环境之前，需要使用 picker 将设计转换为 Python Package。安装好依赖后，可以直接在 `example/adder` 目录下运行以下命令来完成转换：
 
 ```bash
 make dut
 ```
 
-为了验证加法器的功能，我们使用 mlvp 提供的方法来建立验证环境。
+为了验证加法器的功能，需要使用 mlvp 提供的方法来建立验证环境。
 
 首先需要为其创建加法器接口的驱动方法，这里用到了 `Bundle` 来描述需要驱动的某类接口，`Agent` 用于编写对该接口的驱动方法。如下所示：
 
@@ -82,7 +79,7 @@ class AdderAgent(Agent):
         return self.bundle.sum.value, self.bundle.cout.value
 ```
 
-为了验证加法器的功能，我们还需要为其创建一个参考模型，用于验证加法器的输出是否正确。在 mlvp 中，我们使用 `Model` 来定义参考模型。如下所示：
+为了验证加法器的功能，还需要为其创建一个参考模型，用于验证加法器的输出是否正确。在 mlvp 中，我们使用 `Model` 来定义参考模型。如下所示：
 
 ```python
 class AdderModel(Model):
@@ -94,7 +91,7 @@ class AdderModel(Model):
         return sum, cout
 ```
 
-接下来，我们需要创建一个顶层的测试环境，将上述的驱动方法与参考模型相关联，如下所示：
+接下来，需要创建一个顶层的测试环境，将上述的驱动方法与参考模型相关联，如下所示：
 
 ```python
 class AdderEnv(Env):
@@ -107,7 +104,7 @@ class AdderEnv(Env):
 
 此时，验证环境已经搭建完成，mlvp 会自动驱动参考模型并收集结果，并将结果与加法器的输出进行比对。
 
-之后，我们可以编写多个测试用例来验证加法器的功能，如下所示：
+之后，需要编写多个测试用例来验证加法器的功能，如下所示：
 
 ```python
 @pytest.mark.mlvp_async
@@ -144,4 +141,4 @@ make run
 
 ## 其他信息
 
-本项目隶属于 **万众一芯(UnityChip)** 开源验证项目，更多信息请访问 [open-verify.cc](https://open-verify.cc)
+本项目隶属 **万众一芯(UnityChip)** 开放验证，更多信息请访问 [open-verify.cc](https://open-verify.cc)
