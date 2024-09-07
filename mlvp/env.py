@@ -12,6 +12,20 @@ class Env(MObject):
     def __init__(self):
         self.attached_models = []
 
+    # def __init_subclass__(cls, **kwargs):
+    #     """
+    #     Do some initialization when subclassing.
+    #     """
+
+    #     super().__init_subclass__(**kwargs)
+    #     original_init = cls.__init__
+
+    #     def new_init(self, *args, **kwargs):
+    #         original_init(self, *args, **kwargs)
+    #         self.__config_agent_name()
+
+    #     cls.__init__ = new_init
+
     def attach(self, model):
         """
         Attach a model to the env.
@@ -79,6 +93,22 @@ class Env(MObject):
             if isinstance(getattr(self, attr), Agent):
                 yield attr
 
+    # def __config_agent_name(self):
+    #     """
+    #     Configure all Driver and Monitor in the agents.
+    #     """
+
+    #     # Set the agent name to all Driver and Method
+    #     for agent_name in self.all_agent_names():
+    #         agent = getattr(self, agent_name)
+
+    #         for driver_method in agent.all_driver_method():
+    #             driver_method.__driver__.agent_name = agent_name
+    #             print(driver_method.__driver__, agent_name)
+
+    #         for monitor_method in agent.all_monitor_method():
+    #             monitor_method.__monitor__.agent_name = agent_name
+
     def __inject_driver_method(self, model: Model, agent_name, driver_method):
         """
         Inject hook and port from model to matched driver method.
@@ -93,7 +123,8 @@ class Env(MObject):
             "driver_port" : model.get_driver_port(driver_path, mark_matched=True)
         }
 
-        driver_method.__driver__.model_infos[model] = model_info
+        driver = self.__get_driver(agent_name, driver_method.__name__)
+        driver.model_infos[model] = model_info
 
     def __inject_monitor_method(self, model: Model, agent_name, monitor_method):
         """
@@ -131,7 +162,8 @@ class Env(MObject):
             agent = getattr(self, agent_name)
 
             for driver_method in agent.all_driver_method():
-                driver_method.__driver__.model_infos.pop(model)
+                driver = self.__get_driver(agent_name, driver_method.__name__)
+                driver.model_infos.pop(model)
 
             for monitor_method in agent.all_monitor_method():
                 monitor_method.__monitor__.model_infos.pop(model)
@@ -194,7 +226,7 @@ class Env(MObject):
             agent = getattr(self, agent_name)
 
             for driver_method in agent.all_driver_method():
-                driver = driver_method.__driver__
+                driver = self.__get_driver(agent_name, driver_method.__name__)
 
                 self.__ensure_single_driver_match(driver, model)
 
@@ -212,3 +244,11 @@ class Env(MObject):
         self.__ensure_env_monitor_match(model)
         self.__ensure_env_driver_match(model)
         model.ensure_all_matched()
+
+    def __get_driver(self, agent_name, driver_name):
+        """
+        Get the driver by name.
+        """
+
+        agent = getattr(self, agent_name)
+        return agent.drivers[driver_name]

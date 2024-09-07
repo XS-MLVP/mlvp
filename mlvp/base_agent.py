@@ -8,6 +8,7 @@ from .logger import info, warning
 class BaseAgent:
     def __init__(self, func, need_compare, compare_func):
         self.func = func
+        # self.agent_name = ""
         self.name = func.__name__
         self.need_compare = need_compare
         self.compare_func = compare_func
@@ -25,10 +26,6 @@ class Driver(BaseAgent):
         self.model_sync = True
         self.sche_order = "parallel"
         self.priority = 99
-
-        self.func.__driver__ = self
-        self.func.__is_driver_decorated__ = True
-        self.func.__is_model_sync__ = True
 
     def __get_args_dict(self, arg_list, kwarg_list):
         """
