@@ -15,8 +15,6 @@ class Agent:
 
         self.monitor_step = monitor_step
 
-        print("hahahh")
-
         # TODO: forward driver_method call to drivers
         self.drivers = {}
         self.monitors = {}

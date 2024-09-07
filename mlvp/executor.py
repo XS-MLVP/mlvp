@@ -169,9 +169,9 @@ class Executor(MObject):
         if sche_group is None:
             sche_group = coro.__name__
 
-            # driver = Executor.get_driver(coro)
-            # if driver is not None:
-            #     sche_group = f"{driver.agent_name}.{sche_group}"
+            driver = Executor.get_driver(coro)
+            if driver is not None:
+                sche_group = f"{driver.agent_name}.{sche_group}"
 
         if sche_group not in self.__coros:
             self.__coros[sche_group] = []

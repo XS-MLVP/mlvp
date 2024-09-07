@@ -12,19 +12,19 @@ class Env(MObject):
     def __init__(self):
         self.attached_models = []
 
-    # def __init_subclass__(cls, **kwargs):
-    #     """
-    #     Do some initialization when subclassing.
-    #     """
+    def __init_subclass__(cls, **kwargs):
+        """
+        Do some initialization when subclassing.
+        """
 
-    #     super().__init_subclass__(**kwargs)
-    #     original_init = cls.__init__
+        super().__init_subclass__(**kwargs)
+        original_init = cls.__init__
 
-    #     def new_init(self, *args, **kwargs):
-    #         original_init(self, *args, **kwargs)
-    #         self.__config_agent_name()
+        def new_init(self, *args, **kwargs):
+            original_init(self, *args, **kwargs)
+            self.__config_agent_name()
 
-    #     cls.__init__ = new_init
+        cls.__init__ = new_init
 
     def attach(self, model):
         """
@@ -93,21 +93,21 @@ class Env(MObject):
             if isinstance(getattr(self, attr), Agent):
                 yield attr
 
-    # def __config_agent_name(self):
-    #     """
-    #     Configure all Driver and Monitor in the agents.
-    #     """
+    def __config_agent_name(self):
+        """
+        Configure all Driver and Monitor in the agents.
+        """
 
-    #     # Set the agent name to all Driver and Method
-    #     for agent_name in self.all_agent_names():
-    #         agent = getattr(self, agent_name)
+        # Set the agent name to all Driver and Method
+        for agent_name in self.all_agent_names():
+            agent = getattr(self, agent_name)
 
-    #         for driver_method in agent.all_driver_method():
-    #             driver_method.__driver__.agent_name = agent_name
-    #             print(driver_method.__driver__, agent_name)
+            for driver_method in agent.all_driver_method():
+                driver = self.__get_driver(agent_name, driver_method.__name__)
+                driver.agent_name = agent_name
 
-    #         for monitor_method in agent.all_monitor_method():
-    #             monitor_method.__monitor__.agent_name = agent_name
+            # for monitor_method in agent.all_monitor_method():
+                # monitor_method.__monitor__.agent_name = agent_name
 
     def __inject_driver_method(self, model: Model, agent_name, driver_method):
         """
