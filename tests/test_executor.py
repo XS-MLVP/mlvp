@@ -94,3 +94,35 @@ def test_executor():
         infos.clear()
 
     mlvp.run(my_test())
+
+
+class MyEnv2(Env):
+    def __init__(self, dut):
+        super().__init__()
+        self.my_agent = MyAgent(dut, [])
+        self.my_agent2 = MyAgent(dut, [])
+
+class MyModel2(Model):
+    @agent_hook()
+    def my_agent(self, name, args):
+        ...
+
+    @agent_hook()
+    def my_agent2(self, name, args):
+        ...
+
+def test_executor_sche_group():
+    async def my_test():
+        dut = DUT()
+        mlvp.start_clock(dut)
+
+        env = MyEnv2(dut)
+        env.attach(MyModel2())
+
+        async with Executor() as exec:
+            exec(env.my_agent.driver1())
+            exec(env.my_agent2.driver1())
+
+        assert len(exec.get_results()) == 2
+
+    mlvp.run(my_test())
