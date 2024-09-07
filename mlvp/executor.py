@@ -230,5 +230,8 @@ class Executor(MObject):
             coro: The coroutine object.
         """
 
-        locals = coro.cr_frame.f_locals
-        return locals.get("__driver_object__", None)
+        agent = coro.cr_frame.f_locals.get("agent", None)
+        driver_name = coro.__name__
+
+        if agent is not None:
+            return agent.drivers.get(driver_name, None)
