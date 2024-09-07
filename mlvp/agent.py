@@ -1,3 +1,4 @@
+import inspect
 from .logger import error, warning
 from .model import Model
 from .asynchronous import gather, create_task
@@ -37,6 +38,20 @@ class Agent:
         for monitor_method in self.all_monitor_method():
             monitor = Monitor(self, monitor_method.__original_func__)
             self.monitors[monitor_method.__name__] = monitor
+
+    def monitor_size(self, monitor_name):
+        """
+        Get the queue size of the monitor.
+
+        Args:
+            monitor_name: The name of the monitor.
+
+        Returns:
+            The queue size of the monitor.
+        """
+
+        monitor = self.monitors[monitor_name]
+        return monitor.get_queue.qsize()
 
     def all_driver_method(self):
         """
@@ -106,13 +121,6 @@ def driver_method():
     return decorator
 
 def __monitor_wrapped_func(func):
-    """
-    Wrap the original monitor function.
-
-    Returns:
-        The wrapped monitor function.
-    """
-
     func.__is_monitor_decorated__ = True
 
     @functools.wraps(func)
@@ -120,12 +128,8 @@ def __monitor_wrapped_func(func):
         monitor = agent.monitors[func.__name__]
         return await monitor.get_queue.get()
 
-    # wrapper.size = self.get_queue_size
-
     wrapper.__original_func__ = func
     return wrapper
-
-
 
 def monitor_method():
     """

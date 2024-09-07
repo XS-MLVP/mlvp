@@ -6,6 +6,13 @@ from mlvp.env import *
 """
 Case 1
 """
+import asyncio
+class DUT:
+    def __init__(self):
+        self.event = asyncio.Event()
+
+    def Step(self, cycles):
+        ...
 
 class MyAgent(Agent):
     def __init__(self):
@@ -168,26 +175,26 @@ Case 5
 
 class MyAgent5(Agent):
     def __init__(self):
-        super().__init__(lambda: None)
+        super().__init__(lambda: asyncio.Event().wait())
 
     @driver_method()
-    async def driver1():
+    async def driver1(self):
         ...
 
     @monitor_method()
-    async def monitor1():
+    async def monitor1(self):
         ...
 
     @monitor_method()
-    async def monitor2():
+    async def monitor2(self):
         ...
 
     @monitor_method()
-    async def monitor3():
+    async def monitor3(self):
         ...
 
     @monitor_method()
-    async def monitor4():
+    async def monitor4(self):
         ...
 
 class MyModel5(Model):
@@ -200,11 +207,11 @@ class MyModel5(Model):
         self.monitor4_mark = MonitorPort(agent_name="my_agent", monitor_name="monitor4")
 
     @agent_hook("my_agent")
-    def my_agent_mark():
+    def my_agent_mark(self):
         ...
 
     @driver_hook(agent_name="my_agent")
-    def driver1():
+    def driver1(self):
         ...
 
 
@@ -233,7 +240,7 @@ class MyAgent6(Agent):
         ...
 
     @driver_method()
-    async def driver2():
+    async def driver2(self):
         ...
 
 class MyModel6(Model):
@@ -250,14 +257,6 @@ class MyEnv6(Env):
     def __init__(self):
         super().__init__()
         self.my_agent = MyAgent6()
-
-import asyncio
-class DUT:
-    def __init__(self):
-        self.event = asyncio.Event()
-
-    def Step(self, cycles):
-        ...
 
 def test_env6():
     async def my_test():
@@ -358,7 +357,41 @@ def test_env9():
         env = MyEnv9(dut)
         await mlvp.triggers.ClockCycles(dut, 10)
 
-        assert await env.my_agent.monitor_dut() == 1
-        assert await env.my_agent2.monitor_dut() == 1
+        assert env.my_agent.monitor_size("monitor_dut") == 10
+        assert env.my_agent2.monitor_size("monitor_dut") == 10
+
+        for i in range(10):
+            assert await env.my_agent.monitor_dut() == i + 1
+            assert await env.my_agent2.monitor_dut() == i + 1
+
+    mlvp.run(my_test())
+
+"""
+Case 10
+"""
+
+class MyModel10(Model):
+    def __init__(self):
+        super().__init__()
+
+        self.monitor1 = MonitorPort(agent_name="my_agent", monitor_name="monitor_dut")
+        self.monitor2 = MonitorPort(agent_name="my_agent2", monitor_name="monitor_dut")
+
+    async def main(self):
+        for i in range(10):
+            await self.monitor1(i + 1)
+            await self.monitor2(i + 1)
+
+
+def test_env10():
+    async def my_test():
+        dut = DUT()
+        mlvp.start_clock(dut)
+
+        env = MyEnv9(dut)
+        env.attach(MyModel10())
+        await mlvp.triggers.ClockCycles(dut, 10)
+
+
 
     mlvp.run(my_test())
