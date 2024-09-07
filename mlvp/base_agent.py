@@ -8,7 +8,6 @@ from .logger import info, warning
 class BaseAgent:
     def __init__(self, func, need_compare, compare_func):
         self.func = func
-        # self.agent_name = ""
         self.name = func.__name__
         self.need_compare = need_compare
         self.compare_func = compare_func
@@ -204,39 +203,15 @@ class Monitor(BaseAgent):
     The Monitor is used to monitor the DUT and compare the output with the reference.
     """
 
-    def __init__(self, monitor_func):
+    def __init__(self, agent, monitor_func):
         super().__init__(monitor_func, True, None)
 
         self.compare_queue = Queue()
         self.get_queue = Queue()
-        self.auto_monitor = True
-
-        self.agent = None
-        self.comparator = None
-        self.monitor_task = None
-
-        self.func.__monitor__ = self
-        self.func.__is_monitor_decorated__ = True
-        self.func.__need_compare__ = True
-
-    def __start(self, agent):
-        """
-        Start the monitor.
-
-        Args:
-            agent: The agent of DUT.
-        """
 
         self.agent = agent
-
-        if self.auto_monitor:
-            self.monitor_task = create_task(self.__monitor_forever())
-
-        if self.need_compare:
-            model_ports = []
-            for model_info in agent.attached_model.values():
-                model_ports.append(model_info["monitor_port"])
-            self.comparator = Comparator(self.compare_queue, model_ports, compare=self.compare_func, match_detail=True)
+        self.comparator = None
+        self.monitor_task = create_task(self.__monitor_forever())
 
     def get_queue_size(self):
         """
@@ -247,33 +222,6 @@ class Monitor(BaseAgent):
         """
 
         return self.get_queue.qsize()
-
-    def wrapped_func(self):
-        """
-        Wrap the original monitor function.
-
-        Returns:
-            The wrapped monitor function.
-        """
-
-        monitor = self
-
-        @functools.wraps(monitor.func)
-        async def wrapper(agent, *args, **kwargs):
-            if 'config_agent' in kwargs and kwargs['config_agent']:
-                monitor.__start(agent)
-                return
-
-            if monitor.auto_monitor:
-                return await monitor.get_queue.get()
-            else:
-                item = await monitor.func(agent, *args, **kwargs)
-                await monitor.compare_queue.put(item)
-                return item
-
-        wrapper.size = self.get_queue_size
-
-        return wrapper
 
     async def __monitor_forever(self):
         """Monitor the DUT forever."""

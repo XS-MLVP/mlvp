@@ -15,14 +15,10 @@ class Agent:
 
         self.monitor_step = monitor_step
 
-        # TODO: forward driver_method call to drivers
         self.drivers = {}
         self.monitors = {}
         self.__create_all_drivers()
-
-        # Env will assign self to all monitor methods
-        for monitor_func in self.all_monitor_method():
-            create_task(monitor_func(self, config_agent=True))
+        self.__create_all_monitors()
 
     def __create_all_drivers(self):
         """
@@ -39,7 +35,7 @@ class Agent:
         """
 
         for monitor_method in self.all_monitor_method():
-            monitor = Monitor(monitor_method)
+            monitor = Monitor(self, monitor_method.__original_func__)
             self.monitors[monitor_method.__name__] = monitor
 
     def all_driver_method(self):
@@ -109,6 +105,28 @@ def driver_method():
         return __driver_wrapped_func(func)
     return decorator
 
+def __monitor_wrapped_func(func):
+    """
+    Wrap the original monitor function.
+
+    Returns:
+        The wrapped monitor function.
+    """
+
+    func.__is_monitor_decorated__ = True
+
+    @functools.wraps(func)
+    async def wrapper(agent, *args, **kwargs):
+        monitor = agent.monitors[func.__name__]
+        return await monitor.get_queue.get()
+
+    # wrapper.size = self.get_queue_size
+
+    wrapper.__original_func__ = func
+    return wrapper
+
+
+
 def monitor_method():
     """
     Decorator for monitor method.
@@ -118,6 +136,5 @@ def monitor_method():
     """
 
     def decorator(func):
-        monitor = Monitor(func)
-        return monitor.wrapped_func()
+        return __monitor_wrapped_func(func)
     return decorator

@@ -328,3 +328,37 @@ def test_env7():
         await env.my_agent.driver1(1, b=2)
 
     mlvp.run(my_test())
+
+"""
+Case 9
+"""
+
+class MyAgent9(Agent):
+    def __init__(self, dut):
+        super().__init__(dut.event.wait)
+        self.cnt = 0
+
+    @monitor_method()
+    async def monitor_dut(self):
+        self.cnt += 1
+        return self.cnt
+
+class MyEnv9(Env):
+    def __init__(self, dut):
+        super().__init__()
+        self.my_agent = MyAgent9(dut)
+        self.my_agent2 = MyAgent9(dut)
+
+
+def test_env9():
+    async def my_test():
+        dut = DUT()
+        mlvp.start_clock(dut)
+
+        env = MyEnv9(dut)
+        await mlvp.triggers.ClockCycles(dut, 10)
+
+        assert await env.my_agent.monitor_dut() == 1
+        assert await env.my_agent2.monitor_dut() == 1
+
+    mlvp.run(my_test())
