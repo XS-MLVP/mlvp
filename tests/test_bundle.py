@@ -20,6 +20,9 @@ class FakeDUT:
         self.io_d_1 = FakePin()
         self.io_d_2 = FakePin()
 
+    def StepRis(*args, **kargs):
+        ...
+
 def test_bundle():
     mlvp.setup_logging(log_level=mlvp.logger.INFO)
     dut = FakeDUT()
