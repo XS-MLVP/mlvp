@@ -9,6 +9,7 @@ class BaseAgent:
     def __init__(self, func, need_compare, compare_func):
         self.func = func
         self.name = func.__name__
+        self.agent_name = ""
         self.need_compare = need_compare
         self.compare_func = compare_func
         self.model_infos = {}
@@ -181,23 +182,6 @@ class Driver(BaseAgent):
 
         return results["dut_result"]
 
-    def wrapped_func(self):
-        """
-        Wrap the original driver function.
-
-        Returns:
-            The wrapped driver function.
-        """
-
-        # In executor, we use __driver_object__ to get the driver object.
-        __driver_object__ = self
-
-        @functools.wraps(self.func)
-        async def wrapper(agent, *args, **kwargs):
-            return await __driver_object__.process_driver_call(agent, args, kwargs)
-        return wrapper
-
-
 class Monitor(BaseAgent):
     """
     The Monitor is used to monitor the DUT and compare the output with the reference.
@@ -210,8 +194,9 @@ class Monitor(BaseAgent):
         self.get_queue = Queue()
 
         self.agent = agent
-        self.comparator = None
+
         self.monitor_task = create_task(self.__monitor_forever())
+        self.compare_task = create_task(self.__compare_forever())
 
     def get_queue_size(self):
         """
@@ -222,6 +207,15 @@ class Monitor(BaseAgent):
         """
 
         return self.get_queue.qsize()
+
+    async def __compare_forever(self):
+        """Compare the result forever."""
+
+        while True:
+            dut_item = await self.compare_queue.get()
+            for model_info in self.model_infos.values():
+                std_item = await model_info["monitor_port"].get()
+                compare_once(dut_item, std_item, self.compare_func, True)
 
     async def __monitor_forever(self):
         """Monitor the DUT forever."""

@@ -106,8 +106,9 @@ class Env(MObject):
                 driver = self.__get_driver(agent_name, driver_method.__name__)
                 driver.agent_name = agent_name
 
-            # for monitor_method in agent.all_monitor_method():
-                # monitor_method.__monitor__.agent_name = agent_name
+            for monitor_method in agent.all_monitor_method():
+                monitor = self.__get_monitor(agent_name, monitor_method.__name__)
+                monitor.agent_name = agent_name
 
     def __inject_driver_method(self, model: Model, agent_name, driver_method):
         """
@@ -137,7 +138,8 @@ class Env(MObject):
             "monitor_port" : model.get_monitor_port(monitor_path, mark_matched=True)
         }
 
-        monitor_method.__monitor__.model_infos[model] = model_info
+        monitor = self.__get_monitor(agent_name, monitor_method.__name__)
+        monitor.model_infos[model] = model_info
 
     def __inject_all(self, model):
         """
@@ -166,7 +168,8 @@ class Env(MObject):
                 driver.model_infos.pop(model)
 
             for monitor_method in agent.all_monitor_method():
-                monitor_method.__monitor__.model_infos.pop(model)
+                monitor = self.__get_monitor(agent_name, monitor_method.__name__)
+                monitor.model_infos.pop(model)
 
     def __ensure_env_monitor_match(self, model):
         """
@@ -178,8 +181,8 @@ class Env(MObject):
 
             for monitor_method in agent.all_monitor_method():
                 monitor_path = f"{agent_name}.{monitor_method.__name__}"
-
-                if monitor_method.__monitor__.model_infos[model].get("monitor_port") is None:
+                monitor = self.__get_monitor(agent_name, monitor_method.__name__)
+                if monitor.model_infos[model].get("monitor_port") is None:
                     raise ValueError(f"Monitor Method \"{monitor_path}\" is not matched to any monitor port in model")
 
     def __ensure_single_driver_match(self, driver, model):
@@ -252,3 +255,11 @@ class Env(MObject):
 
         agent = getattr(self, agent_name)
         return agent.drivers[driver_name]
+
+    def __get_monitor(self, agent_name, monitor_name):
+        """
+        Get the monitor by name.
+        """
+
+        agent = getattr(self, agent_name)
+        return agent.monitors[monitor_name]
