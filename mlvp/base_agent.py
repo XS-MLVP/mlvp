@@ -6,11 +6,10 @@ from .executor import add_priority_task
 from .logger import info, warning
 
 class BaseAgent:
-    def __init__(self, func, need_compare, compare_func):
+    def __init__(self, func, compare_func):
         self.func = func
         self.name = func.__name__
         self.agent_name = ""
-        self.need_compare = need_compare
         self.compare_func = compare_func
         self.model_infos = {}
 
@@ -21,9 +20,8 @@ class Driver(BaseAgent):
     """
 
     def __init__(self, drive_func):
-        super().__init__(drive_func, True, None)
+        super().__init__(drive_func, None)
 
-        self.model_sync = True
         self.sche_order = "parallel"
         self.priority = 99
 
@@ -98,9 +96,6 @@ class Driver(BaseAgent):
             kwarg_list: The list of kwargs.
         """
 
-        if not self.model_sync:
-            return
-
         results = []
         for model_info in self.model_infos.values():
             results.append(await self.__drive_single_model(model_info, arg_list, kwarg_list))
@@ -115,9 +110,6 @@ class Driver(BaseAgent):
             dut_result: The result of the DUT.
             model_results: The results of the models.
         """
-
-        if not self.need_compare:
-            return
 
         for model_result in model_results:
             if model_result is not None and dut_result is None:
@@ -188,7 +180,7 @@ class Monitor(BaseAgent):
     """
 
     def __init__(self, agent, monitor_func):
-        super().__init__(monitor_func, True, None)
+        super().__init__(monitor_func, None)
 
         self.compare_queue = Queue()
         self.get_queue = Queue()
