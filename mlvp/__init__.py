@@ -5,6 +5,7 @@ The mlvp package provides the core classes and functions for the mlvp framework.
 from .asynchronous import start_clock, create_task, run, gather
 from .asynchronous import Event, Queue, sleep
 from .asynchronous import Component
+from .delay import Delayer
 
 from .bundle import Bundle, WriteMode, Signal, Signals
 

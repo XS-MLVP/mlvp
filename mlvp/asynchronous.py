@@ -167,6 +167,7 @@ async def main_coro(coro):
     loop = asyncio.get_event_loop()
     loop.set_exception_handler(handle_exception)
     loop.new_task_run = False
+    loop.delayer_list = []
 
     ret = await coro
 
