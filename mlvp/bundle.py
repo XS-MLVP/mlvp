@@ -182,6 +182,8 @@ class Signal(UnconnectedSignal):
     ...
 
 def Signals(num: int):
+    if num == 1:
+        return Signal()
     return [Signal() for _ in range(num)]
 
 class Bundle(MObject):
