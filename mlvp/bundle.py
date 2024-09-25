@@ -213,6 +213,14 @@ class Bundle(MObject):
 
         self.set_current_level_signal()
 
+        # Recreate the sub-bundles
+        for sub_bundle_name, sub_bundle in self.__all_sub_bundles():
+            original_sub_bundle = getattr(self, sub_bundle_name)
+            new_sub_bundle = sub_bundle.__class__()
+            new_sub_bundle.current_level_signals = original_sub_bundle.current_level_signals
+            new_sub_bundle.__connect_method = original_sub_bundle.__connect_method
+            setattr(self, sub_bundle_name, new_sub_bundle)
+
     def ___dut_call_on_rise__(self, cycle):
         """
         Call the on rise method of target DUT.
@@ -751,9 +759,7 @@ class Bundle(MObject):
 
     def set_current_level_signal(self):
         """
-
-        Returns:
-            A generator of signal names.
+        Collect all signals in the current level and save them in the current_level_signals.
         """
 
         self.current_level_signals = [signal for signal in self.signals]
