@@ -29,6 +29,13 @@ class PreRequest:
         for g in cov_groups:
             self.dut.xclock.StepRis(sample_helper(g))
 
+    def __need_report(self):
+        """
+        Whether to generate the report
+        """
+
+        return self.request.config.getoption("--mlvp-report")
+
     def create_dut(self, dut_cls, clock_name=None, waveform_filename=None, coverage_filename=None):
         """
         Create the DUT.
@@ -43,26 +50,30 @@ class PreRequest:
             The DUT instance.
         """
 
-        report_dir = os.path.dirname(self.request.config.option.report[0])
+        if self.__need_report():
+            report_dir = os.path.dirname(self.request.config.option.report[0])
 
-        self.waveform_filename = f"{report_dir}/{dut_cls.__name__}_{self.request_name}.fst"
-        self.coverage_filename = f"{report_dir}/{dut_cls.__name__}_{self.request_name}.dat"
+            self.waveform_filename = f"{report_dir}/{dut_cls.__name__}_{self.request_name}.fst"
+            self.coverage_filename = f"{report_dir}/{dut_cls.__name__}_{self.request_name}.dat"
 
-        if waveform_filename is not None:
-            self.waveform_filename = waveform_filename
-        if coverage_filename is not None:
-            self.coverage_filename = coverage_filename
+            if waveform_filename is not None:
+                self.waveform_filename = waveform_filename
+            if coverage_filename is not None:
+                self.coverage_filename = coverage_filename
 
-        self.dut = dut_cls(
-            waveform_filename=self.waveform_filename,
-            coverage_filename=self.coverage_filename
-        )
+            self.dut = dut_cls(
+                waveform_filename=self.waveform_filename,
+                coverage_filename=self.coverage_filename
+            )
+
+            if self.cov_groups is not None:
+                self.__add_cov_sample(self.cov_groups)
+        else:
+            self.dut = dut_cls()
+
 
         if clock_name:
             self.dut.InitClock(clock_name)
-
-        if self.cov_groups is not None:
-            self.__add_cov_sample(self.cov_groups)
 
         return self.dut
 
@@ -89,8 +100,10 @@ class PreRequest:
 
         if self.dut is not None:
             self.dut.Finish()
-            set_func_coverage(request, self.cov_groups)
-            set_line_coverage(request, self.coverage_filename)
+
+            if self.__need_report():
+                set_func_coverage(request, self.cov_groups)
+                set_line_coverage(request, self.coverage_filename)
 
         for g in self.cov_groups:
             g.clear()
