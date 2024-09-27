@@ -34,13 +34,13 @@ from mlvp.reporter import CovGroup
 def adder_cover_point(adder):
     g = CovGroup("Adder addition function")
 
-    g.add_watch_point(adder.io_cout, {"io_cout is 0": fc.Eq(0)}, name="Cout is 0")
-    g.add_watch_point(adder.io_cout, {"io_cout is 1": fc.Eq(1)}, name="Cout is 1")
-    g.add_watch_point(adder.io_cin, {"io_cin is 0": fc.Eq(0)}, name="Cin is 0")
-    g.add_watch_point(adder.io_cin, {"io_cin is 1": fc.Eq(1)}, name="Cin is 1")
-    g.add_watch_point(adder.io_a, {"a > 0": fc.Gt(0)}, name="signal a set")
-    g.add_watch_point(adder.io_b, {"b > 0": fc.Gt(0)}, name="signal b set")
-    g.add_watch_point(adder.io_sum, {"sum > 0": fc.Gt(0)}, name="signal sum set")
+    g.add_cover_point(adder.io_cout, {"io_cout is 0": fc.Eq(0)}, name="Cout is 0")
+    g.add_cover_point(adder.io_cout, {"io_cout is 1": fc.Eq(1)}, name="Cout is 1")
+    g.add_cover_point(adder.io_cin, {"io_cin is 0": fc.Eq(0)}, name="Cin is 0")
+    g.add_cover_point(adder.io_cin, {"io_cin is 1": fc.Eq(1)}, name="Cin is 1")
+    g.add_cover_point(adder.io_a, {"a > 0": fc.Gt(0)}, name="signal a set")
+    g.add_cover_point(adder.io_b, {"b > 0": fc.Gt(0)}, name="signal b set")
+    g.add_cover_point(adder.io_sum, {"sum > 0": fc.Gt(0)}, name="signal sum set")
 
     return g
 

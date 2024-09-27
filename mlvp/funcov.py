@@ -5,12 +5,12 @@ import json
 from .base import MObject
 
 
-class CovCondition(MObject): 
+class CovCondition(MObject):
     """
     CovCondition class
     """
     def __check__(self, target) -> bool:
-        raise NotImplementedError("Method __check__ is not implemented")        
+        raise NotImplementedError("Method __check__ is not implemented")
     def __call__(self, target) -> bool:
         return self.__check__(target.value)
 
@@ -19,7 +19,7 @@ class CovEq(CovCondition):
         CovEq class, check if the target is equal to the value
         """
         def __init__(self, value) -> None:
-            self.value = value        
+            self.value = value
         def __check__(self, target) -> bool:
             return target == self.value
 
@@ -28,7 +28,7 @@ class CovGt(CovCondition):
         CovGt class, check if the target is greater than the value
         """
         def __init__(self, value) -> None:
-            self.value = value        
+            self.value = value
         def __check__(self, target) -> bool:
             return target > self.value
 
@@ -37,7 +37,7 @@ class CovLt(CovCondition):
         CovLt class, check if the target is less than the value
         """
         def __init__(self, value) -> None:
-            self.value = value        
+            self.value = value
         def __check__(self, target) -> bool:
             return target < self.value
 
@@ -46,7 +46,7 @@ class CovGe(CovCondition):
         CovGe class, check if the target is greater or equal to the value
         """
         def __init__(self, value) -> None:
-            self.value = value        
+            self.value = value
         def __check__(self, target) -> bool:
             return target >= self.value
 
@@ -55,7 +55,7 @@ class CovLe(CovCondition):
         CovLe class, check if the target is less or equal to the value
         """
         def __init__(self, value) -> None:
-            self.value = value        
+            self.value = value
         def __check__(self, target) -> bool:
             return target <= self.value
 
@@ -64,7 +64,7 @@ class CovNe(CovCondition):
         CovNe class, check if the target is not equal to the value
         """
         def __init__(self, value) -> None:
-            self.value = value        
+            self.value = value
         def __check__(self, target) -> bool:
             return target != self.value
 
@@ -73,7 +73,7 @@ class CovIn(CovCondition):
         CovIn class, check if the target is in the value
         """
         def __init__(self, value) -> None:
-            self.value = value        
+            self.value = value
         def __check__(self, target) -> bool:
             return target in self.value
 
@@ -82,7 +82,7 @@ class CovNotIn(CovCondition):
         CovNotIn class, check if the target is not in the value
         """
         def __init__(self, value) -> None:
-            self.value = value        
+            self.value = value
         def __check__(self, target) -> bool:
             return target not in self.value
 
@@ -133,7 +133,7 @@ class CovGroup(object):
         self.stop_sample = False
         self.sample_count = 0
         self.sample_calln = 0
-    
+
     def add_watch_point(self, target: object, bins: Union[dict, CovCondition, Callable[[object, object], bool]], check_func: dict = {}, name: str = "", once=None):
         """
         Add a watch point to the group
@@ -162,12 +162,14 @@ class CovGroup(object):
                 for c in v:
                     if not callable(c):
                         raise ValueError("Invalid value %s for key %s" % (c, k))
-        self.cov_points[key] = {"taget": target, 
-                                "bins": bins, 
-                                "check_func": check_func, 
-                                "hints": {k: 0 for k in bins.keys()}, 
-                                "hinted": False, 
+        self.cov_points[key] = {"taget": target,
+                                "bins": bins,
+                                "check_func": check_func,
+                                "hints": {k: 0 for k in bins.keys()},
+                                "hinted": False,
                                 "once": self.disable_sample_when_point_hinted if once == None else once}
+
+    add_cover_point = add_watch_point
 
     def del_point(self, name: str):
         """
@@ -194,7 +196,7 @@ class CovGroup(object):
         """
         self.init()
 
-    @staticmethod    
+    @staticmethod
     def __check__(points) -> bool:
         hinted = True
         onece = True
@@ -220,13 +222,13 @@ class CovGroup(object):
 
             if hints == 0:
                 hinted = False
-            
+
             if not (hinted and points["once"] == True):
                 onece = False
             points["hints"][k] = hints
         points["hinted"] = hinted
         return hinted, onece
-    
+
     def cover_points(self):
          """
          return the name list for all points
@@ -250,7 +252,7 @@ class CovGroup(object):
         if key not in self.cov_points:
             raise ValueError("Invalid key %s" % key)
         return self.cov_points[key]["hinted"]
-    
+
     def is_all_covered(self) -> bool:
         """
         check if all points are covered
@@ -281,7 +283,7 @@ class CovGroup(object):
             if not onece:
                 self.all_once = False
         self.hinted = all_hinted
-    
+
     def sample_stoped(self):
         """
         check if the group is stoped
@@ -289,13 +291,13 @@ class CovGroup(object):
         if self.stop_sample:
             return True
         return self.hinted and self.all_once
-    
+
     def stop_sample(self):
         """
         stop sampling
         """
         self.stop_sample = True
-    
+
     def resume_sample(self):
         """
         resume sampling
@@ -313,14 +315,14 @@ class CovGroup(object):
         points_hints = 0
         points_total = 0
         has_once = False
-        
+
         def collect_bins(v):
             nonlocal bins_total, bins_hints
             bins_total += 1
             if v["hints"] > 0:
                 bins_hints += 1
             return v
-        
+
         def collect_points(v):
             nonlocal points_total, points_hints, has_once
             points_total += 1
@@ -329,9 +331,9 @@ class CovGroup(object):
             if v["once"]:
                 has_once = True
             return v["hinted"]
-        
-        ret["points"] = [{"once": v["once"], "hinted": collect_points(v), "bins": [collect_bins({"name": x, "hints": y}) 
-                                                          for x, y in v["hints"].items()], "name":k} 
+
+        ret["points"] = [{"once": v["once"], "hinted": collect_points(v), "bins": [collect_bins({"name": x, "hints": y})
+                                                          for x, y in v["hints"].items()], "name":k}
                                                           for k, v in self.cov_points.items()]
         ret["name"] = self.name
         ret["hinted"] = self.hinted
