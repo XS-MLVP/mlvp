@@ -121,7 +121,6 @@ async def __clock_loop(dut):
         dut.Step(1)
         dut.event.set()
         dut.event.clear()
-        assert False, "hhhh"
 
 create_task = asyncio.create_task
 

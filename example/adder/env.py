@@ -24,7 +24,6 @@ class AdderModel(Model):
     @driver_hook(agent_name="add_agent")
     def exec_add(self, a, b, cin):
         result = a + b + cin
-        # assert False, "hahah"
         sum = result & ((1 << 64) - 1)
         cout = result >> 64
         return sum, cout
