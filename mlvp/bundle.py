@@ -1,4 +1,5 @@
 import re
+import random
 from enum import Enum
 from .logger import *
 from .base import MObject
@@ -534,6 +535,27 @@ class Bundle(MObject):
             if Bundle.__is_instance_of_xpin(signal) and not signal.IsOutIO():
                 signal.value = value
         return self
+
+    def randomize_all(self, value_range=None, exclude_signals=[], random_func=random.randint):
+        """
+        Randomize all signals values in the bundle.
+
+        Args:
+            value_range: The range of the random values, eg. (0, 100), both values are inclusive. If None, the range
+                         of random values will be the range of each signal value.
+            exclude_signals: A list of signals to exclude from randomization, sub-bundle names are separated by dots.
+            random_func: The random function to use, default is random.randint.
+        """
+
+        for signal_name, signal in self.all_signals():
+            if signal_name not in exclude_signals and Bundle.__is_instance_of_xpin(signal) and not signal.IsOutIO():
+                if value_range is not None:
+                    signal.value = random_func(value_range[0], value_range[1])
+                else:
+                    signal_width = signal.W()
+                    if signal_width == 0:
+                        signal_width = 1
+                    signal.value = random_func(0, 2**signal_width-1)
 
     def assign(self, item, multilevel=True, level_string=""):
         """
