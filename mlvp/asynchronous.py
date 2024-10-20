@@ -121,6 +121,7 @@ async def __clock_loop(dut):
         dut.Step(1)
         dut.event.set()
         dut.event.clear()
+        assert False, "hhhh"
 
 create_task = asyncio.create_task
 
@@ -151,12 +152,22 @@ def set_clock_event(dut, loop):
         xpin = xpin_info["signal"]
         xpin.event = new_event
 
+def handle_exception(loop, context):
+    """
+    Handle exceptions in the event loop.
+    """
+
+    loop.default_exception_handler(context)
+    loop.stop()
+
 async def main_coro(coro):
     """
     Run the main coroutine.
     """
 
-    asyncio.get_event_loop().new_task_run = False
+    loop = asyncio.get_event_loop()
+    loop.set_exception_handler(handle_exception)
+    loop.new_task_run = False
 
     ret = await coro
 
