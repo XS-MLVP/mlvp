@@ -171,68 +171,6 @@ class Env(MObject):
                 monitor = self.__get_monitor(agent_name, monitor_method.__name__)
                 monitor.model_infos.pop(model)
 
-    def __ensure_env_monitor_match(self, model):
-        """
-        Make sure the all monitor_method in env has matched monitor_port in model.
-        """
-
-        for agent_name in self.all_agent_names():
-            agent = getattr(self, agent_name)
-
-            for monitor_method in agent.all_monitor_method():
-                monitor_path = f"{agent_name}.{monitor_method.__name__}"
-                monitor = self.__get_monitor(agent_name, monitor_method.__name__)
-                if monitor.model_infos[model].get("monitor_port") is None:
-                    raise ValueError(f"Monitor Method \"{monitor_path}\" is not matched to any monitor port in model")
-
-    def __ensure_single_driver_match(self, driver, model):
-        """
-        Make sure the driver is matched correctly to model.
-        """
-
-        model_info = driver.model_infos[model]
-
-        if model_info.get("agent_port") is not None:
-            if model_info.get("driver_port") is not None:
-                raise ValueError(f"Agent port \"{model_info['agent_port'].name}\" and driver port "
-                                 f"\"{model_info['driver_port'].name}\" should not be set at the same time")
-
-            if model_info.get("agent_hook") is not None:
-                raise ValueError(f"Agent port \"{model_info['agent_port'].name}\" and agent hook "
-                                 f"\"{model_info['agent_hook'].__agent_name__}\" should not be set at the same time")
-
-            if model_info.get("driver_hook") is not None:
-                raise ValueError(f"Agent port \"{model_info['agent_port'].name}\" and driver hook "
-                                 f"\"{model_info['driver_hook'].__driver_path__}\" should not be set at the same time")
-
-        if model_info.get("driver_port") is not None:
-            if model_info.get("agent_hook") is not None:
-                raise ValueError(f"Driver port \"{model_info['driver_port'].name}\" and agent hook "
-                                 f"\"{model_info['agent_hook'].__agent_name__}\" should not be set at the same time")
-
-            if model_info.get("driver_hook") is not None:
-                raise ValueError(f"Driver port \"{model_info['driver_port'].name}\" and driver hook "
-                                 f"\"{model_info['driver_hook'].__driver_path__}\" should not be set at the same time")
-
-        if model_info.get("agent_hook") is None \
-            and model_info.get("driver_hook") is None \
-            and model_info.get("agent_port") is None \
-            and model_info.get("driver_port") is None:
-            raise ValueError(f"Driver Method \"{driver.name}\" is not matched to any port or hook in model")
-
-    def __ensure_env_driver_match(self, model):
-        """
-        Make sure the all driver_method in env has matched correctly to model.
-        """
-
-        for agent_name in self.all_agent_names():
-            agent = getattr(self, agent_name)
-
-            for driver_method in agent.all_driver_method():
-                driver = self.__get_driver(agent_name, driver_method.__name__)
-
-                self.__ensure_single_driver_match(driver, model)
-
     def __ensure_model_match(self, model: Model):
         """
         Make sure the model matches the env. This function should be called after injecting.
@@ -244,8 +182,6 @@ class Env(MObject):
             ValueError: If the model does not match the env.
         """
 
-        self.__ensure_env_monitor_match(model)
-        self.__ensure_env_driver_match(model)
         model.ensure_all_matched()
 
     def __get_driver(self, agent_name, driver_name):
