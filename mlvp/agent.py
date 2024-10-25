@@ -1,20 +1,21 @@
-import inspect
-from .logger import error, warning
-from .model import Model
-from .asynchronous import gather, create_task
+from .logger import warning
 from .base_agent import Monitor, Driver
 
 class Agent:
     """Provides an agent for operation on the DUT."""
 
-    def __init__(self, monitor_step):
+    def __init__(self, bundle):
         """
         Args:
-            monitor_step: Provide a step function for monitor, and monitor will monitor
-                          each step.
+            bundle: The bundle of the agent to drive.
         """
 
-        self.monitor_step = monitor_step
+        if callable(bundle):
+            self.monitor_step = bundle
+            warning("Passing monitor_step during Agent initialization is about to be deprecated, so pass the Bundle instance directly.")
+        else:
+            self.bundle = bundle
+            self.monitor_step = bundle.step
 
         self.drivers = {}
         self.monitors = {}
