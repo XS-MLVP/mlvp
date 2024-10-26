@@ -251,7 +251,7 @@ class MyModel6(Model):
 
     async def main(self):
         req = await self.my_agent()
-        assert req == ("my_agent", {"a": 1, "b": 2, "c": 5})
+        assert req == ("driver1", {"a": 1, "b": 2, "c": 5})
 
 class MyEnv6(Env):
     def __init__(self):
