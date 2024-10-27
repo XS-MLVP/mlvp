@@ -1,25 +1,35 @@
 [build-system]
-requires = ["hatchling"]
+requires = [
+    "hatchling",
+    "hatch-vcs",
+]
 build-backend = "hatchling.build"
 
 [project]
-name = "toffee"
-version = "0.1.3"
-dependencies = [
-    'pytest>=7.4.3',
-    'pytest-reporter-html1>=0.8.4',
-    'pytest-xdist>=3.5.0',
+name = "pytoffee"
+desciption = "a framework for building hardware verification platform using software method"
+readme = "README.md"
+license = {file="LICENSE"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
+    "License :: OSI Approved :: Mulan Permissive Software License v2 (MulanPSL-2.0)",
 ]
 requires-python = ">=3.8"
-desciption = "Multi-Language Verification Platform"
-readme = "README.md"
-license = {file = "LICENSE"}
-keywords = ["verification", "multi-language", "platform"]
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Programming Language :: Python :: 3",
-    "Framework :: Pytest",
-]
+dependencies = []
+dynamic = ["version"]
 
 [project.urls]
-Repository = "https://github.com/XS-MLVP/toffee"
+Homepage = "https://github.com/XS-MLVP/toffee"
+Source = "https://github.com/XS-MLVP/toffee"
+Tracker = "https://github.com/XS-MLVP/toffee/issues"
+
+[tool.hatch.build.targets.sdist]
+exclude = ["/.github"]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "toffee/__version.py"
