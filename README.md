@@ -17,13 +17,19 @@ toffee 需要的依赖有：
 - Python 3.6.8+
 - Picker 0.9.0+
 
-当安装好上述依赖后，可运行以下命令安装最新版本的 toffee：
+当安装好上述依赖后，可通过 pip 安装 toffee：
 
 ```bash
-pip3 install toffee@git+https://github.com/XS-MLVP/toffee@master
+pip3 install pytoffee
 ```
 
-或通过以下方式进行本地安装：
+或通过以下命令安装最新版本的 toffee：
+
+```bash
+pip3 install pytoffee@git+https://github.com/XS-MLVP/toffee@master
+```
+
+通过以下方式可进行本地安装：
 
 ```bash
 git clone https://github.com/XS-MLVP/toffee.git
