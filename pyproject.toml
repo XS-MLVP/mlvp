@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pytoffee"
-desciption = "a framework for building hardware verification platform using software method"
+description = "a framework for building hardware verification platform using software method"
 readme = "README.md"
 license = {file="LICENSE"}
 classifiers = [
