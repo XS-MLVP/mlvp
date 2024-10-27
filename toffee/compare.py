@@ -1,4 +1,4 @@
-from . import Component
+from .asynchronous import Component
 from .logger import *
 
 

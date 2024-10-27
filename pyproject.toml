@@ -25,6 +25,9 @@ Homepage = "https://github.com/XS-MLVP/toffee"
 Source = "https://github.com/XS-MLVP/toffee"
 Tracker = "https://github.com/XS-MLVP/toffee/issues"
 
+[tool.hatch.build]
+packages = ["toffee"]
+
 [tool.hatch.build.targets.sdist]
 exclude = ["/.github"]
 

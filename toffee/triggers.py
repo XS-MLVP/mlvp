@@ -1,6 +1,5 @@
 from .bundle import Bundle
 
-
 async def ClockCycles(item, ncycles=1):
     """
     Wait for the specified number of clock cycles.
