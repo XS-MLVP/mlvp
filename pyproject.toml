@@ -23,7 +23,3 @@ classifiers = [
 
 [project.urls]
 Repository = "https://github.com/XS-MLVP/toffee"
-
-[project.entry-points.pytest11]
-pytest-toffee = "toffee.pytest_toffee.plugin"
-
