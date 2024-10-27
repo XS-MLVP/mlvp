@@ -1,5 +1,5 @@
 import re
-from mlvp import Bundle
+from toffee import Bundle
 
 
 def __gen_bundle_code(bundle_name: str, signals, max_width: int):
@@ -22,7 +22,7 @@ def __gen_bundle_code(bundle_name: str, signals, max_width: int):
     else:
         end_code = f" = Signals({signals_num})"
 
-    code = f"from mlvp import Bundle\nfrom mlvp import Signals, Signal\n\nclass {bundle_name}(Bundle):\n"
+    code = f"from toffee import Bundle\nfrom toffee import Signals, Signal\n\nclass {bundle_name}(Bundle):\n"
     code_line = "\t"
     index = 0
 

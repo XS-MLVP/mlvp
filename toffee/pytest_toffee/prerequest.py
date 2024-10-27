@@ -34,7 +34,7 @@ class PreRequest:
         Whether to generate the report
         """
 
-        return self.request.config.getoption("--mlvp-report")
+        return self.request.config.getoption("--toffee-report")
 
     def create_dut(self, dut_cls, clock_name=None, waveform_filename=None, coverage_filename=None):
         """

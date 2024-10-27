@@ -1,7 +1,7 @@
 import pytest
 import os
-import mlvp.funcov as fc
-from mlvp.reporter import set_func_coverage
+import toffee.funcov as fc
+from toffee.reporter import set_func_coverage
 import sys
 
 
@@ -12,7 +12,7 @@ class TextData(object):
     def __str__(self):
         return self.value
 
-def test_funcov(request): 
+def test_funcov(request):
     v = TextData(1)
     g = fc.CovGroup("coverage_group_0")
 

@@ -33,9 +33,9 @@ GREEN = "\x1b[32m"
 BLUE = "\x1b[34m"
 WHITE = "\x1b[37m"
 
-class MLVPFormatter(logging.Formatter):
+class ToffeeFormatter(logging.Formatter):
     """
-    Custom formatter for MLVP logs. It supports log_id attribute display in the log record
+    Custom formatter for Toffee logs. It supports log_id attribute display in the log record
     """
 
     def format(self, record):
@@ -57,16 +57,16 @@ class MLVPFormatter(logging.Formatter):
         return f"{color}{message}{RESET}"
 
 
-#####################################
-# MLVP Global Logging Configuration #
-#####################################
+#######################################
+# Toffee Global Logging Configuration #
+#######################################
 
-mlvp_logger = logging.getLogger("MLVP")
+toffee_logger = logging.getLogger("Toffee")
 
 def get_logger() -> logging.Logger:
-    """Returns the global logger for MLVP"""
+    """Returns the global logger for Toffee"""
 
-    return mlvp_logger
+    return toffee_logger
 
 
 # Global handlers
@@ -78,7 +78,7 @@ screen_handler = logging.StreamHandler()
 
 # Default format and formatter
 default_format = '%(name)s_%(levelname)s @%(filename)s:%(lineno)d%(log_id)s:\t%(message)s'
-default_formatter = MLVPFormatter(default_format)
+default_formatter = ToffeeFormatter(default_format)
 
 # log levels
 INFO = logging.INFO
@@ -89,7 +89,7 @@ CRITICAL = logging.CRITICAL
 
 def setup_logging(log_level=WARNING, format=default_format, console_display=True, log_file=None):
     """
-    Setup the logging configuration for MLVP
+    Setup the logging configuration for Toffee
 
     Args:
         log_level: The log level for the logger
@@ -99,38 +99,38 @@ def setup_logging(log_level=WARNING, format=default_format, console_display=True
     """
 
     logging.basicConfig(level=log_level, format=format, handlers=[])
-    mlvp_logger.setLevel(log_level)
+    toffee_logger.setLevel(log_level)
 
-    for handler in mlvp_logger.handlers[:]:
-        mlvp_logger.removeHandler(handler)
+    for handler in toffee_logger.handlers[:]:
+        toffee_logger.removeHandler(handler)
         handler.close()
 
-    mlvp_logger.addHandler(stats_handler)
+    toffee_logger.addHandler(stats_handler)
 
     if console_display:
         screen_handler.setLevel(log_level)
         screen_handler.setFormatter(default_formatter)
-        mlvp_logger.addHandler(screen_handler)
+        toffee_logger.addHandler(screen_handler)
 
     if log_file:
         fh = logging.FileHandler(log_file, mode='w')
         fh.setLevel(log_level)
         fh.setFormatter(default_formatter)
-        mlvp_logger.addHandler(fh)
+        toffee_logger.addHandler(fh)
 
 setup_logging()
 
-##########################
-# MLVP Logging Functions #
-##########################
+############################
+# Toffee Logging Functions #
+############################
 
-log = mlvp_logger.log
-debug = mlvp_logger.debug
-info = mlvp_logger.info
-warning = mlvp_logger.warning
-error = mlvp_logger.error
-critical = mlvp_logger.critical
-exception = mlvp_logger.exception
+log = toffee_logger.log
+debug = toffee_logger.debug
+info = toffee_logger.info
+warning = toffee_logger.warning
+error = toffee_logger.error
+critical = toffee_logger.critical
+exception = toffee_logger.exception
 
 def summary():
     """Display a summary of the logs"""
@@ -144,4 +144,4 @@ def summary():
     # for k, v in stats_handler.id_stats.items():
     #     summary_str += f"{k}:\t{v}\n"
 
-    mlvp_logger.info(summary_str)
+    toffee_logger.info(summary_str)

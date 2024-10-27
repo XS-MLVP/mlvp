@@ -1,5 +1,5 @@
 """
-The mlvp package provides the core classes and functions for the mlvp framework.
+The toffee package provides the core classes and functions for the toffee framework.
 """
 
 from .asynchronous import start_clock, create_task, run, gather
@@ -16,7 +16,7 @@ from .logger import INFO, DEBUG, WARNING, ERROR, CRITICAL
 from .env import Env
 from .executor import Executor
 
-from .pytest_mlvp import PreRequest
+from .pytest_toffee import PreRequest
 
 
 """

@@ -6,9 +6,9 @@ Test cases
 import random
 from env import AdderEnv, AdderBundle
 
-@pytest.mark.mlvp_async
-async def test_random(mlvp_request):
-    env = mlvp_request()
+@pytest.mark.toffee_async
+async def test_random(toffee_request):
+    env = toffee_request()
 
     for _ in range(1000):
         a = random.randint(0, 2**64-1)
@@ -16,9 +16,9 @@ async def test_random(mlvp_request):
         cin = random.randint(0, 1)
         await env.add_agent.exec_add(a, b, cin)
 
-@pytest.mark.mlvp_async
-async def test_boundary(mlvp_request):
-    env = mlvp_request()
+@pytest.mark.toffee_async
+async def test_boundary(toffee_request):
+    env = toffee_request()
 
     for cin in [0, 1]:
         for a in [0, 2**64-1]:
@@ -28,8 +28,8 @@ async def test_boundary(mlvp_request):
 """
 Coverage definition
 """
-import mlvp.funcov as fc
-from mlvp.reporter import CovGroup
+import toffee.funcov as fc
+from toffee.reporter import CovGroup
 
 def adder_cover_point(adder):
     g = CovGroup("Adder addition function")
@@ -47,18 +47,18 @@ def adder_cover_point(adder):
 """
 Initialize before each test
 """
-import mlvp
-from mlvp import PreRequest
+import toffee
+from toffee import PreRequest
 from UT_Adder import DUTAdder
 
 @pytest.fixture()
-def mlvp_request(mlvp_pre_request: PreRequest):
-    mlvp.setup_logging(mlvp.INFO)
-    dut = mlvp_pre_request.create_dut(DUTAdder)
-    mlvp_pre_request.add_cov_groups(adder_cover_point(dut))
+def toffee_request(toffee_pre_request: PreRequest):
+    toffee.setup_logging(toffee.INFO)
+    dut = toffee_pre_request.create_dut(DUTAdder)
+    toffee_pre_request.add_cov_groups(adder_cover_point(dut))
 
     def start_code():
-        mlvp.start_clock(dut)
+        toffee.start_clock(dut)
         return AdderEnv(AdderBundle.from_prefix("io_").bind(dut))
 
     return start_code

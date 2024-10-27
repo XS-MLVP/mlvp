@@ -1,8 +1,8 @@
 import sys
 sys.path.append("../")
 
-import mlvp
-from mlvp import Bundle
+import toffee
+from toffee import Bundle
 
 class FakeXData:
     ...
@@ -24,7 +24,7 @@ class FakeDUT:
         ...
 
 def test_bundle():
-    mlvp.setup_logging(log_level=mlvp.logger.INFO)
+    toffee.setup_logging(log_level=toffee.logger.INFO)
     dut = FakeDUT()
 
     class BundleB(Bundle):

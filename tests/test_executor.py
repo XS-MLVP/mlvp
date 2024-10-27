@@ -1,7 +1,7 @@
-import mlvp
-from mlvp import *
-from mlvp.agent import *
-from mlvp.model import *
+import toffee
+from toffee import *
+from toffee.agent import *
+from toffee.model import *
 
 import asyncio
 class DUT:
@@ -53,7 +53,7 @@ class MyEnv(Env):
 def test_executor():
     async def my_test():
         dut = DUT()
-        mlvp.start_clock(dut)
+        toffee.start_clock(dut)
 
         infos = []
 
@@ -93,7 +93,7 @@ def test_executor():
         assert infos == ["model2", "model1", "driver2", "driver1"]
         infos.clear()
 
-    mlvp.run(my_test())
+    toffee.run(my_test())
 
 
 class MyEnv2(Env):
@@ -114,7 +114,7 @@ class MyModel2(Model):
 def test_executor_sche_group():
     async def my_test():
         dut = DUT()
-        mlvp.start_clock(dut)
+        toffee.start_clock(dut)
 
         env = MyEnv2(dut)
         env.attach(MyModel2())
@@ -125,4 +125,4 @@ def test_executor_sche_group():
 
         assert len(exec.get_results()) == 2
 
-    mlvp.run(my_test())
+    toffee.run(my_test())

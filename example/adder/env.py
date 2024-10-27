@@ -1,7 +1,7 @@
-from mlvp import *
-from mlvp.triggers import *
-from mlvp.agent import *
-from mlvp.model import *
+from toffee import *
+from toffee.triggers import *
+from toffee.agent import *
+from toffee.model import *
 
 class AdderBundle(Bundle):
 	a, b, cin, sum, cout = Signals(5)

@@ -90,7 +90,7 @@ async def sleep(delay: float):
 
 """Asynchronous primary interface
 
-Using the asynchronous event logic defined above, the external asynchronous interface in mlvp library is implemented.
+Using the asynchronous event logic defined above, the external asynchronous interface in toffee library is implemented.
 """
 
 callback_list = []

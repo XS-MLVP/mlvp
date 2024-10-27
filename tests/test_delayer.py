@@ -1,7 +1,7 @@
 import pytest
 import asyncio
-import mlvp
-from mlvp.triggers import *
+import toffee
+from toffee.triggers import *
 
 class FakeXData:
     def __init__(self):
@@ -18,14 +18,14 @@ class DUT:
 
 
 
-@pytest.mark.mlvp_async
+@pytest.mark.toffee_async
 async def test_delayer():
     dut = DUT()
     dut.event.clear()
-    mlvp.start_clock(dut)
+    toffee.start_clock(dut)
 
-    delayed_a = mlvp.Delayer(dut.a, 2)
-    delayed_b = mlvp.Delayer(dut.b, 3)
+    delayed_a = toffee.Delayer(dut.a, 2)
+    delayed_b = toffee.Delayer(dut.b, 3)
 
     for i in range(10):
         dut.a.value = i

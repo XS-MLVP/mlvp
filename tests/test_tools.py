@@ -1,6 +1,6 @@
 
-from mlvp.base import *
-from mlvp.reporter import set_line_coverage
+from toffee.base import *
+from toffee.reporter import set_line_coverage
 
 
 def test_cmd_echo():

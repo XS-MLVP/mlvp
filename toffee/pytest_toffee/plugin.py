@@ -6,7 +6,7 @@ from .. import run
 import os
 
 """
-mlvp report
+toffee report
 """
 
 @pytest.hookimpl(trylast=True, optionalhook=True)
@@ -23,7 +23,7 @@ def pytest_runtest_makereport(item, call):
 def pytest_addoption(parser):
     group = parser.getgroup("reporter")
     group.addoption(
-        "--mlvp-report",
+        "--toffee-report",
         action="store_true",
         default=False,
         help="Generate the report."
@@ -46,10 +46,10 @@ def pytest_addoption(parser):
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_configure(config):
-    config.addinivalue_line("markers", "mlvp_async: mark test to run with mlvp's event loop")
+    config.addinivalue_line("markers", "toffee_async: mark test to run with toffee's event loop")
 
-    if config.getoption("--mlvp-report"):
-        config.option.template = ["html/mlvp.html"]
+    if config.getoption("--toffee-report"):
+        config.option.template = ["html/toffee.html"]
         config.option.template_dir = [get_template_dir()]
 
         report_name = config.getoption("--report-name")
@@ -65,14 +65,14 @@ def pytest_configure(config):
         set_output_report(report_name)
 
 """
-mlvp async test
+toffee async test
 """
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_pyfunc_call(pyfuncitem):
-    if "mlvp_async" in pyfuncitem.keywords:
+    if "toffee_async" in pyfuncitem.keywords:
         func = pyfuncitem.obj
-        assert inspect.iscoroutinefunction(func), "test marked with mlvp_async must be a coroutine function"
+        assert inspect.iscoroutinefunction(func), "test marked with toffee_async must be a coroutine function"
 
         signature = inspect.signature(func)
         filtered_funcargs = {
@@ -88,7 +88,7 @@ def pytest_pyfunc_call(pyfuncitem):
 from .prerequest import PreRequest
 
 @pytest.fixture()
-def mlvp_pre_request(request):
+def toffee_pre_request(request):
     pre_request_info = PreRequest(request)
     pre_request_info.request_name = str(request._pyfuncitem).strip('<').strip('>').split(' ')[-1]
     yield pre_request_info

@@ -1,10 +1,10 @@
 
 # import os
 # import sys
-# from mlvp.reporter import generate_pytest_report, set_line_good_rate, set_meta_info, set_user_info
+# from toffee.reporter import generate_pytest_report, set_line_good_rate, set_meta_info, set_user_info
 
-# import mlvp.funcov as fc
-# from mlvp.reporter import set_func_coverage
+# import toffee.funcov as fc
+# from toffee.reporter import set_func_coverage
 
 # class TextData(object):
 #     '''Simple class to test funcov with a text value'''
