@@ -1,10 +1,12 @@
 from toffee import *
-from toffee.triggers import *
 from toffee.agent import *
 from toffee.model import *
+from toffee.triggers import *
+
 
 class AdderBundle(Bundle):
-	a, b, cin, sum, cout = Signals(5)
+    a, b, cin, sum, cout = Signals(5)
+
 
 class AdderAgent(Agent):
     @driver_method()
@@ -23,6 +25,7 @@ class AdderModel(Model):
         sum = result & ((1 << 64) - 1)
         cout = result >> 64
         return sum, cout
+
 
 class AdderEnv(Env):
     def __init__(self, adder_bundle):

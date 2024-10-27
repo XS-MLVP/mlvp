@@ -1,4 +1,5 @@
 import re
+
 from toffee import Bundle
 
 
@@ -34,7 +35,9 @@ def __gen_bundle_code(bundle_name: str, signals, max_width: int):
         current_width = TAB_SIZE + len(signals[index]) + 2 + 1
         index += 1
 
-        while index < signals_num and current_width + len(signals[index]) + 2 <= max_width:
+        while (
+            index < signals_num and current_width + len(signals[index]) + 2 <= max_width
+        ):
             code_line += f"{signals[index]}, "
             current_width += len(signals[index]) + 2
             index += 1
@@ -54,7 +57,10 @@ def __gen_bundle_code(bundle_name: str, signals, max_width: int):
 
     return code
 
-def gen_bundle_code_from_prefix(bundle_name: str, dut, prefix: str = "", max_width: int = 120):
+
+def gen_bundle_code_from_prefix(
+    bundle_name: str, dut, prefix: str = "", max_width: int = 120
+):
     """
     Generates a bundle using all the signals with the specified prefix.
 
@@ -73,18 +79,18 @@ def gen_bundle_code_from_prefix(bundle_name: str, dut, prefix: str = "", max_wid
     for dict in Bundle.dut_all_signals(dut):
         name = dict["name"]
         if name.startswith(prefix):
-            signals.append(name[len(prefix):])
+            signals.append(name[len(prefix) :])
 
     signals.sort()
     signals_num = len(signals)
     assert signals_num > 0, f"No signals found with prefix {prefix}"
 
-
     code = __gen_bundle_code(bundle_name, signals, max_width)
     code += "\n"
-    code += f"bundle = {bundle_name}.from_prefix(\"{prefix}\")\n"
+    code += f'bundle = {bundle_name}.from_prefix("{prefix}")\n'
 
     return code
+
 
 def gen_bundle_code_from_regex(bundle_name: str, dut, regex: str, max_width: int = 120):
     """
@@ -117,9 +123,10 @@ def gen_bundle_code_from_regex(bundle_name: str, dut, regex: str, max_width: int
 
     code = __gen_bundle_code(bundle_name, signals, max_width)
     code += "\n"
-    code += f"bundle = {bundle_name}.from_regex(r\"{regex}\")\n"
+    code += f'bundle = {bundle_name}.from_regex(r"{regex}")\n'
 
     return code
+
 
 def gen_bundle_code_from_dict(bundle_name: str, dut, dict: dict, max_width: int = 120):
     """

@@ -1,11 +1,15 @@
-import pytest
 import asyncio
+
+import pytest
+
 import toffee
 from toffee.triggers import *
+
 
 class FakeXData:
     def __init__(self):
         self.value = 0
+
 
 class DUT:
     def __init__(self):
@@ -13,9 +17,7 @@ class DUT:
         self.a = FakeXData()
         self.b = FakeXData()
 
-    def Step(self, cycles):
-        ...
-
+    def Step(self, cycles): ...
 
 
 @pytest.mark.toffee_async

@@ -1,15 +1,17 @@
+import asyncio
+
 import toffee
 from toffee import *
 from toffee.agent import *
 from toffee.model import *
 
-import asyncio
+
 class DUT:
     def __init__(self):
         self.event = asyncio.Event()
 
-    def Step(self, cycles):
-        ...
+    def Step(self, cycles): ...
+
 
 class MyAgent(Agent):
     def __init__(self, dut, infos):
@@ -43,6 +45,7 @@ class MyModel(Model):
     @driver_hook(agent_name="my_agent")
     def driver2(self):
         self.infos.append("model2")
+
 
 class MyEnv(Env):
     def __init__(self, dut, infos):
@@ -102,14 +105,14 @@ class MyEnv2(Env):
         self.my_agent = MyAgent(dut, [])
         self.my_agent2 = MyAgent(dut, [])
 
+
 class MyModel2(Model):
     @agent_hook()
-    def my_agent(self, name, args):
-        ...
+    def my_agent(self, name, args): ...
 
     @agent_hook()
-    def my_agent2(self, name, args):
-        ...
+    def my_agent2(self, name, args): ...
+
 
 def test_executor_sche_group():
     async def my_test():

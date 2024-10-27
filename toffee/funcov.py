@@ -1,7 +1,9 @@
-from typing import Union, Callable
-from collections import OrderedDict
 import inspect
 import json
+from collections import OrderedDict
+from typing import Callable
+from typing import Union
+
 from .base import MObject
 
 
@@ -9,92 +11,122 @@ class CovCondition(MObject):
     """
     CovCondition class
     """
+
     def __check__(self, target) -> bool:
         raise NotImplementedError("Method __check__ is not implemented")
+
     def __call__(self, target) -> bool:
         return self.__check__(target.value)
 
+
 class CovEq(CovCondition):
-        """
-        CovEq class, check if the target is equal to the value
-        """
-        def __init__(self, value) -> None:
-            self.value = value
-        def __check__(self, target) -> bool:
-            return target == self.value
+    """
+    CovEq class, check if the target is equal to the value
+    """
+
+    def __init__(self, value) -> None:
+        self.value = value
+
+    def __check__(self, target) -> bool:
+        return target == self.value
+
 
 class CovGt(CovCondition):
-        """
-        CovGt class, check if the target is greater than the value
-        """
-        def __init__(self, value) -> None:
-            self.value = value
-        def __check__(self, target) -> bool:
-            return target > self.value
+    """
+    CovGt class, check if the target is greater than the value
+    """
+
+    def __init__(self, value) -> None:
+        self.value = value
+
+    def __check__(self, target) -> bool:
+        return target > self.value
+
 
 class CovLt(CovCondition):
-        """
-        CovLt class, check if the target is less than the value
-        """
-        def __init__(self, value) -> None:
-            self.value = value
-        def __check__(self, target) -> bool:
-            return target < self.value
+    """
+    CovLt class, check if the target is less than the value
+    """
+
+    def __init__(self, value) -> None:
+        self.value = value
+
+    def __check__(self, target) -> bool:
+        return target < self.value
+
 
 class CovGe(CovCondition):
-        """
-        CovGe class, check if the target is greater or equal to the value
-        """
-        def __init__(self, value) -> None:
-            self.value = value
-        def __check__(self, target) -> bool:
-            return target >= self.value
+    """
+    CovGe class, check if the target is greater or equal to the value
+    """
+
+    def __init__(self, value) -> None:
+        self.value = value
+
+    def __check__(self, target) -> bool:
+        return target >= self.value
+
 
 class CovLe(CovCondition):
-        """
-        CovLe class, check if the target is less or equal to the value
-        """
-        def __init__(self, value) -> None:
-            self.value = value
-        def __check__(self, target) -> bool:
-            return target <= self.value
+    """
+    CovLe class, check if the target is less or equal to the value
+    """
+
+    def __init__(self, value) -> None:
+        self.value = value
+
+    def __check__(self, target) -> bool:
+        return target <= self.value
+
 
 class CovNe(CovCondition):
-        """
-        CovNe class, check if the target is not equal to the value
-        """
-        def __init__(self, value) -> None:
-            self.value = value
-        def __check__(self, target) -> bool:
-            return target != self.value
+    """
+    CovNe class, check if the target is not equal to the value
+    """
+
+    def __init__(self, value) -> None:
+        self.value = value
+
+    def __check__(self, target) -> bool:
+        return target != self.value
+
 
 class CovIn(CovCondition):
-        """
-        CovIn class, check if the target is in the value
-        """
-        def __init__(self, value) -> None:
-            self.value = value
-        def __check__(self, target) -> bool:
-            return target in self.value
+    """
+    CovIn class, check if the target is in the value
+    """
+
+    def __init__(self, value) -> None:
+        self.value = value
+
+    def __check__(self, target) -> bool:
+        return target in self.value
+
 
 class CovNotIn(CovCondition):
-        """
-        CovNotIn class, check if the target is not in the value
-        """
-        def __init__(self, value) -> None:
-            self.value = value
-        def __check__(self, target) -> bool:
-            return target not in self.value
+    """
+    CovNotIn class, check if the target is not in the value
+    """
+
+    def __init__(self, value) -> None:
+        self.value = value
+
+    def __check__(self, target) -> bool:
+        return target not in self.value
+
 
 class CovIsInRange(CovCondition):
-        """
-        CovIsInRange class, check if the target is in the range
-        """
-        def __init__(self, low, high) -> None:
-            self.low = low
-            self.high = high
-        def __check__(self, target) -> bool:
-            return self.low <= target <= self.high
+    """
+    CovIsInRange class, check if the target is in the range
+    """
+
+    def __init__(self, low, high) -> None:
+        self.low = low
+        self.high = high
+
+    def __check__(self, target) -> bool:
+        return self.low <= target <= self.high
+
 
 # aliases
 Eq = CovEq
@@ -134,7 +166,14 @@ class CovGroup(object):
         self.sample_count = 0
         self.sample_calln = 0
 
-    def add_watch_point(self, target: object, bins: Union[dict, CovCondition, Callable[[object, object], bool]], check_func: dict = {}, name: str = "", once=None):
+    def add_watch_point(
+        self,
+        target: object,
+        bins: Union[dict, CovCondition, Callable[[object, object], bool]],
+        check_func: dict = {},
+        name: str = "",
+        once=None,
+    ):
         """
         Add a watch point to the group
         @param target: the object to be watched, need to have a value attribute. eg target.value is available
@@ -145,7 +184,7 @@ class CovGroup(object):
             the default check function will be used.
         @param name: the name of the point
         """
-        key  = name
+        key = name
         if not key:
             key = "%s:%s" % (target, bins.keys())
         if key in self.cov_points:
@@ -162,12 +201,14 @@ class CovGroup(object):
                 for c in v:
                     if not callable(c):
                         raise ValueError("Invalid value %s for key %s" % (c, k))
-        self.cov_points[key] = {"taget": target,
-                                "bins": bins,
-                                "check_func": check_func,
-                                "hints": {k: 0 for k in bins.keys()},
-                                "hinted": False,
-                                "once": self.disable_sample_when_point_hinted if once == None else once}
+        self.cov_points[key] = {
+            "taget": target,
+            "bins": bins,
+            "check_func": check_func,
+            "hints": {k: 0 for k in bins.keys()},
+            "hinted": False,
+            "once": self.disable_sample_when_point_hinted if once == None else once,
+        }
 
     add_cover_point = add_watch_point
 
@@ -187,7 +228,9 @@ class CovGroup(object):
         """
         if name not in self.cov_points:
             raise ValueError("Invalid key %s" % name)
-        self.cov_points[name]["hints"] = {k: 0 for k in self.cov_points[name]["bins"].keys()}
+        self.cov_points[name]["hints"] = {
+            k: 0 for k in self.cov_points[name]["bins"].keys()
+        }
         self.cov_points[name]["hinted"] = False
 
     def clear(self):
@@ -209,15 +252,17 @@ class CovGroup(object):
             else:
                 checked = False
                 if callable(b):
-                     checked = b(points["taget"])
+                    checked = b(points["taget"])
                 elif isinstance(b, (list, tuple)):
-                     checked = True
-                     for c in b:
-                         if not c(points["taget"]):
+                    checked = True
+                    for c in b:
+                        if not c(points["taget"]):
                             checked = False
                             break
                 else:
-                    raise ValueError("Invalid value %s for key %s, Need callable bin/bins" % (b, k))
+                    raise ValueError(
+                        "Invalid value %s for key %s, Need callable bin/bins" % (b, k)
+                    )
                 hints += 1 if checked else 0
 
             if hints == 0:
@@ -230,10 +275,10 @@ class CovGroup(object):
         return hinted, onece
 
     def cover_points(self):
-         """
-         return the name list for all points
-         """
-         return self.cov_points.keys()
+        """
+        return the name list for all points
+        """
+        return self.cov_points.keys()
 
     def cover_point(self, key: str):
         """
@@ -332,9 +377,17 @@ class CovGroup(object):
                 has_once = True
             return v["hinted"]
 
-        ret["points"] = [{"once": v["once"], "hinted": collect_points(v), "bins": [collect_bins({"name": x, "hints": y})
-                                                          for x, y in v["hints"].items()], "name":k}
-                                                          for k, v in self.cov_points.items()]
+        ret["points"] = [
+            {
+                "once": v["once"],
+                "hinted": collect_points(v),
+                "bins": [
+                    collect_bins({"name": x, "hints": y}) for x, y in v["hints"].items()
+                ],
+                "name": k,
+            }
+            for k, v in self.cov_points.items()
+        ]
         ret["name"] = self.name
         ret["hinted"] = self.hinted
         ret["bin_num_total"] = bins_total
@@ -345,7 +398,9 @@ class CovGroup(object):
         # other informations
         ret["__filename__"] = self.filename
         ret["__lineno__"] = self.lineno
-        ret["__disable_sample_when_point_hinted__"] = self.disable_sample_when_point_hinted
+        ret["__disable_sample_when_point_hinted__"] = (
+            self.disable_sample_when_point_hinted
+        )
         ret["__sample_count__"] = self.sample_count
         ret["__sample_calln__"] = self.sample_calln
         ret["__stop_sample__"] = self.stop_sample

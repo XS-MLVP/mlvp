@@ -1,4 +1,7 @@
-from .asynchronous import create_task, gather, add_callback, Event
+from .asynchronous import add_callback
+from .asynchronous import create_task
+from .asynchronous import Event
+from .asynchronous import gather
 from .base import MObject
 
 
@@ -8,12 +11,14 @@ Priority Task Execution
 
 __priority_tasks = []
 
+
 def add_priority_task(coro, priority, done_event):
     """
     Add a priority task to the priority task list.
     """
 
     __priority_tasks.append((coro, priority, done_event))
+
 
 async def __execute_priority_tasks():
     """
@@ -26,11 +31,13 @@ async def __execute_priority_tasks():
 
     __priority_tasks.clear()
 
+
 add_callback(__execute_priority_tasks)
 
 """
 Executor
 """
+
 
 class Executor(MObject):
     """
@@ -125,8 +132,13 @@ class Executor(MObject):
 
         self.__exit_any_event.clear()
         for tasks in self.__coros.items():
-            self.__uncompleted.append(create_task(self.sequential_execution_all(\
-                *tasks[1], complete_event=self.__exit_any_event)))
+            self.__uncompleted.append(
+                create_task(
+                    self.sequential_execution_all(
+                        *tasks[1], complete_event=self.__exit_any_event
+                    )
+                )
+            )
         await self.__exit_any_event.wait()
 
     async def wait_all(self):
@@ -181,12 +193,16 @@ class Executor(MObject):
 
             driver = Executor.get_driver(coro)
             coro_name = coro.__name__
-            assert driver is not None, f"{coro_name} is not a driver function, cannot set priority"
+            assert (
+                driver is not None
+            ), f"{coro_name} is not a driver function, cannot set priority"
 
         if sche_order is not None:
             driver = Executor.get_driver(coro)
             coro_name = coro.__name__
-            assert driver is not None, f"{coro_name} is not a driver function, cannot set sche_order"
+            assert (
+                driver is not None
+            ), f"{coro_name} is not a driver function, cannot set sche_order"
 
         self.__coros[sche_group].append((coro, sche_order, priority))
 

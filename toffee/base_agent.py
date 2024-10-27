@@ -1,9 +1,15 @@
 import functools
 import inspect
-from .compare import Comparator, compare_once
-from .asynchronous import create_task, Queue, Event
+
+from .asynchronous import create_task
+from .asynchronous import Event
+from .asynchronous import Queue
+from .compare import Comparator
+from .compare import compare_once
 from .executor import add_priority_task
-from .logger import info, warning
+from .logger import info
+from .logger import warning
+
 
 class BaseAgent:
     def __init__(self, func, compare_func):
@@ -12,6 +18,7 @@ class BaseAgent:
         self.agent_name = ""
         self.compare_func = compare_func
         self.model_infos = {}
+
 
 class Driver(BaseAgent):
     """
@@ -98,7 +105,9 @@ class Driver(BaseAgent):
 
         results = []
         for model_info in self.model_infos.values():
-            results.append(await self.__drive_single_model(model_info, arg_list, kwarg_list))
+            results.append(
+                await self.__drive_single_model(model_info, arg_list, kwarg_list)
+            )
 
         return results
 
@@ -113,13 +122,19 @@ class Driver(BaseAgent):
 
         for model_result in model_results:
             if model_result is not None and dut_result is None:
-                warning(f"The model result is {model_result}, but the DUT result is None.")
+                warning(
+                    f"The model result is {model_result}, but the DUT result is None."
+                )
 
             elif model_result is None and dut_result is not None:
-                warning(f"The dut result is {dut_result}, but the model result is None.")
+                warning(
+                    f"The dut result is {dut_result}, but the model result is None."
+                )
 
             elif model_result is not None and dut_result is not None:
-                compare_once(dut_result, model_result, self.compare_func, match_detail=True)
+                compare_once(
+                    dut_result, model_result, self.compare_func, match_detail=True
+                )
 
     async def model_exec_wrapper(self, model_coro, results, compare_func):
         results["model_results"] = await model_coro
@@ -142,9 +157,7 @@ class Driver(BaseAgent):
         results = {"dut_result": None, "model_results": None}
 
         model_coro = self.model_exec_wrapper(
-            self.forward_to_models(arg_list, kwarg_list),
-            results,
-            self.compare_results
+            self.forward_to_models(arg_list, kwarg_list), results, self.compare_results
         )
 
         if self.sche_order == "parallel":
@@ -173,6 +186,7 @@ class Driver(BaseAgent):
             raise ValueError(f"Invalid sche_order: {self.sche_order}")
 
         return results["dut_result"]
+
 
 class Monitor(BaseAgent):
     """

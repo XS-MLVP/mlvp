@@ -1,12 +1,16 @@
 import asyncio
-from .base import MObject
+
 from .asynchronous import add_callback
+from .base import MObject
+
 
 async def __process_delayer():
     for delayer in asyncio.get_event_loop().delayer_list:
         delayer.sample()
 
+
 add_callback(__process_delayer)
+
 
 class Delayer(MObject):
     """

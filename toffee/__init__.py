@@ -1,60 +1,63 @@
-"""
-The toffee package provides the core classes and functions for the toffee framework.
-"""
-
-from .asynchronous import start_clock, create_task, run, gather
-from .asynchronous import Event, Queue, sleep
+from . import agent
+from . import funcov
+from . import model
+from . import triggers
+from . import utils
+from .agent import Agent
+from .agent import driver_method
+from .agent import monitor_method
 from .asynchronous import Component
+from .asynchronous import create_task
+from .asynchronous import Event
+from .asynchronous import gather
+from .asynchronous import Queue
+from .asynchronous import run
+from .asynchronous import sleep
+from .asynchronous import start_clock
+from .bundle import Bundle
+from .bundle import Signal
+from .bundle import Signals
+from .bundle import WriteMode
 from .delay import Delayer
-
-from .bundle import Bundle, WriteMode, Signal, Signals
-
-from .logger import get_logger, setup_logging, summary
-from .logger import log, debug, info, warning, error, critical
-from .logger import INFO, DEBUG, WARNING, ERROR, CRITICAL
-
 from .env import Env
 from .executor import Executor
-
-"""
-The triggers module privides trigger functions that are used to wait for a specific condition about clock event.
-
-content: ClockCycles, Value, AllValid, Condition, Change, RisingEdge, FallingEdge
-"""
-from . import triggers
-from .triggers import ClockCycles, Value, AllValid, Condition, Change, RisingEdge, FallingEdge
-
-
-"""
-The model module provides the Model class, hook decorators, and port classes.
-
-content: Model, DriverPort, MonitorPort, AgentPort, driver_hook, and agent_hook
-"""
-from . import model
-from .model import Model, DriverPort, MonitorPort, AgentPort, driver_hook, agent_hook
-
-
-"""
-The agent module provides the Agent class for operation on the DUT.
-
-content: Agent, driver_method, and monitor_method
-"""
-from . import agent
-from .agent import Agent, driver_method, monitor_method
-
-
-"""
-utils provides some useful function for verification.
-
-content: lfsr_64, plru, two_bits_counter
-"""
-from . import utils
-from .utils import lfsr_64, plru, two_bits_counter
-
-"""
-The funcov module provides the coverage group class and coverage point class.
-
-content: CovGroup, Eq, Ne, Gt, Ge, Lt, Le, In, NotIn, IsInRange
-"""
-from . import funcov
-from .funcov import CovGroup, Eq, Ne, Gt, Ge, Lt, Le, In, NotIn, IsInRange
+from .funcov import CovGroup
+from .funcov import Eq
+from .funcov import Ge
+from .funcov import Gt
+from .funcov import In
+from .funcov import IsInRange
+from .funcov import Le
+from .funcov import Lt
+from .funcov import Ne
+from .funcov import NotIn
+from .logger import CRITICAL
+from .logger import critical
+from .logger import DEBUG
+from .logger import debug
+from .logger import ERROR
+from .logger import error
+from .logger import get_logger
+from .logger import INFO
+from .logger import info
+from .logger import log
+from .logger import setup_logging
+from .logger import summary
+from .logger import WARNING
+from .logger import warning
+from .model import agent_hook
+from .model import AgentPort
+from .model import driver_hook
+from .model import DriverPort
+from .model import Model
+from .model import MonitorPort
+from .triggers import AllValid
+from .triggers import Change
+from .triggers import ClockCycles
+from .triggers import Condition
+from .triggers import FallingEdge
+from .triggers import RisingEdge
+from .triggers import Value
+from .utils import lfsr_64
+from .utils import plru
+from .utils import two_bits_counter

@@ -1,26 +1,32 @@
-import toffee
+import random
+
 import toffee_test
+from env import AdderBundle
+from env import AdderEnv
+
+import toffee
 
 """
 Test cases
 """
-import random
-from env import AdderEnv, AdderBundle
+
 
 @toffee_test.case
 async def test_random(adder_env):
     for _ in range(1000):
-        a = random.randint(0, 2**64-1)
-        b = random.randint(0, 2**64-1)
+        a = random.randint(0, 2**64 - 1)
+        b = random.randint(0, 2**64 - 1)
         cin = random.randint(0, 1)
         await adder_env.add_agent.exec_add(a, b, cin)
+
 
 @toffee_test.case
 async def test_boundary(adder_env):
     for cin in [0, 1]:
-        for a in [0, 2**64-1]:
-            for b in [0, 2**64-1]:
+        for a in [0, 2**64 - 1]:
+            for b in [0, 2**64 - 1]:
                 await adder_env.add_agent.exec_add(a, b, cin)
+
 
 """
 Coverage definition
@@ -28,6 +34,7 @@ Coverage definition
 
 import toffee.funcov as fc
 from toffee.funcov import CovGroup
+
 
 def adder_cover_point(adder):
     g = CovGroup("Adder addition function")
@@ -42,11 +49,13 @@ def adder_cover_point(adder):
 
     return g
 
+
 """
 Initialize before each test
 """
 
 from UT_Adder import DUTAdder
+
 
 @toffee_test.fixture
 async def adder_env(toffee_request: toffee_test.ToffeeRequest):

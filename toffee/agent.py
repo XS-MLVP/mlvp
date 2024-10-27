@@ -1,5 +1,7 @@
+from .base_agent import Driver
+from .base_agent import Monitor
 from .logger import warning
-from .base_agent import Monitor, Driver
+
 
 class Agent:
     """Provides an agent for operation on the DUT."""
@@ -12,7 +14,9 @@ class Agent:
 
         if callable(bundle):
             self.monitor_step = bundle
-            warning("Passing monitor_step during Agent initialization is about to be deprecated, so pass the Bundle instance directly.")
+            warning(
+                "Passing monitor_step during Agent initialization is about to be deprecated, so pass the Bundle instance directly."
+            )
         else:
             self.bundle = bundle
             self.monitor_step = bundle.step
@@ -96,7 +100,9 @@ class Agent:
             if hasattr(monitor_method, "__is_monitor_decorated__"):
                 return monitor_method
 
+
 import functools
+
 
 def __driver_wrapped_func(func):
     func.__is_driver_decorated__ = True
@@ -109,6 +115,7 @@ def __driver_wrapped_func(func):
     wrapper.__original_func__ = func
     return wrapper
 
+
 def driver_method():
     """
     Decorator for driver method.
@@ -119,7 +126,9 @@ def driver_method():
 
     def decorator(func):
         return __driver_wrapped_func(func)
+
     return decorator
+
 
 def __monitor_wrapped_func(func):
     func.__is_monitor_decorated__ = True
@@ -132,6 +141,7 @@ def __monitor_wrapped_func(func):
     wrapper.__original_func__ = func
     return wrapper
 
+
 def monitor_method():
     """
     Decorator for monitor method.
@@ -142,4 +152,5 @@ def monitor_method():
 
     def decorator(func):
         return __monitor_wrapped_func(func)
+
     return decorator

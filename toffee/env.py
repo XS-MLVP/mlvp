@@ -1,7 +1,8 @@
-from .base import MObject
-from .logger import error, warning
-from .model import Model
 from .agent import Agent
+from .base import MObject
+from .logger import error
+from .logger import warning
+from .model import Model
 
 
 class Env(MObject):
@@ -41,7 +42,9 @@ class Env(MObject):
         model.collect_all()
 
         if model.is_attached():
-            warning(f"Model {model} is already attached to an env, the original env will be replaced")
+            warning(
+                f"Model {model} is already attached to an env, the original env will be replaced"
+            )
             model.attached_env = None
             model.clear_matched()
 
@@ -118,10 +121,10 @@ class Env(MObject):
         driver_path = f"{agent_name}.{driver_method.__name__}"
 
         model_info = {
-            "agent_hook" : model.get_agent_hook(agent_name, mark_matched=True),
-            "agent_port" : model.get_agent_port(agent_name, mark_matched=True),
-            "driver_hook" : model.get_driver_hook(driver_path, mark_matched=True),
-            "driver_port" : model.get_driver_port(driver_path, mark_matched=True)
+            "agent_hook": model.get_agent_hook(agent_name, mark_matched=True),
+            "agent_port": model.get_agent_port(agent_name, mark_matched=True),
+            "driver_hook": model.get_driver_hook(driver_path, mark_matched=True),
+            "driver_port": model.get_driver_port(driver_path, mark_matched=True),
         }
 
         driver = self.__get_driver(agent_name, driver_method.__name__)
@@ -135,7 +138,7 @@ class Env(MObject):
         monitor_path = f"{agent_name}.{monitor_method.__name__}"
 
         model_info = {
-            "monitor_port" : model.get_monitor_port(monitor_path, mark_matched=True)
+            "monitor_port": model.get_monitor_port(monitor_path, mark_matched=True)
         }
 
         monitor = self.__get_monitor(agent_name, monitor_method.__name__)

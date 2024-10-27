@@ -1,10 +1,7 @@
-"""
-Description: This file contains the trigger functions that are used to wait for a specific condition about clock event.
-"""
-
 from .bundle import Bundle
 
-async def ClockCycles(item, ncycles = 1):
+
+async def ClockCycles(item, ncycles=1):
     """
     Wait for the specified number of clock cycles.
 
@@ -28,7 +25,7 @@ async def ClockCycles(item, ncycles = 1):
             await item.wait()
 
 
-async def Value(pin, value: int, delay = 1):
+async def Value(pin, value: int, delay=1):
     """
     Wait for the pin to have the specified value.
 
@@ -40,11 +37,11 @@ async def Value(pin, value: int, delay = 1):
 
     for _ in range(delay):
         await pin.event.wait()
-    while (pin.value != value):
+    while pin.value != value:
         await pin.event.wait()
 
 
-async def AllValid(*pins, delay = 1):
+async def AllValid(*pins, delay=1):
     """
     Wait for all the pins to be valid.
 
@@ -84,7 +81,7 @@ async def Change(pin):
     """
 
     old_value = pin.value
-    while (pin.value == old_value):
+    while pin.value == old_value:
         await pin.event.wait()
 
 
@@ -98,7 +95,7 @@ async def RisingEdge(pin):
     """
 
     old_value = pin.value
-    while (old_value != 0 or pin.value == old_value):
+    while old_value != 0 or pin.value == old_value:
         old_value = pin.value
         await pin.event.wait()
 
@@ -113,7 +110,6 @@ async def FallingEdge(pin):
     """
 
     old_value = pin.value
-    while (pin.value != 0 or pin.value == old_value):
+    while pin.value != 0 or pin.value == old_value:
         old_value = pin.value
         await pin.event.wait()
-

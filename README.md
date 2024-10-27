@@ -63,7 +63,8 @@ make dut
 
 ```python
 class AdderBundle(Bundle):
-	a, b, cin, sum, cout = Signals(5)
+    a, b, cin, sum, cout = Signals(5)
+
 
 class AdderAgent(Agent):
     def __init__(self, bundle):
@@ -112,18 +113,19 @@ async def test_random(toffee_request):
     env = toffee_request()
 
     for _ in range(1000):
-        a = random.randint(0, 2**64-1)
-        b = random.randint(0, 2**64-1)
+        a = random.randint(0, 2**64 - 1)
+        b = random.randint(0, 2**64 - 1)
         cin = random.randint(0, 1)
         await env.add_agent.exec_add(a, b, cin)
+
 
 @pytest.mark.toffee_async
 async def test_boundary(toffee_request):
     env = toffee_request()
 
     for cin in [0, 1]:
-        for a in [0, 2**64-1]:
-            for b in [0, 2**64-1]:
+        for a in [0, 2**64 - 1]:
+            for b in [0, 2**64 - 1]:
                 await env.add_agent.exec_add(a, b, cin)
 ```
 
