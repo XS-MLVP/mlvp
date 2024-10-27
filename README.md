@@ -1,12 +1,14 @@
 # toffee
 
+> mlvp 已更名为 toffee
+
 **toffee** 是一款基于 Python 的硬件验证框架，旨在帮助用户更加便捷、规范地使用 Python 构建硬件验证环境。
 
 **toffee** 是一个使用 Python 语言编写的硬件验证框架，依托多语言转换工具 [picker](https://github.com/XS-MLVP/picker)，该工具能够将硬件设计的 Verilog 代码转换为 Python Package，使得用户可以使用 Python 来驱动并验证硬件设计。
 
 **toffee** 吸收了部分 UVM 验证方法学，确保验证环境的规范性与可复用性。此外，toffee 对验证环境的构建方式进行了重新设计，使其更符合软件开发者的使用习惯，从而让软件开发者能够轻松上手硬件验证工作。
 
-更多关于 toffee 的介绍，请参阅 [toffee 文档](https://open-verify.cc/toffee/docs/toffee)。
+更多关于 toffee 的介绍，请参阅 [toffee 文档](https://open-verify.cc/mlvp/docs/mlvp)。
 
 ## 安装
 
@@ -67,10 +69,6 @@ class AdderBundle(Bundle):
 
 
 class AdderAgent(Agent):
-    def __init__(self, bundle):
-        super().__init__(bundle.step)
-        self.bundle = bundle
-
     @driver_method()
     async def exec_add(self, a, b, cin):
         self.bundle.a.value = a
@@ -108,25 +106,20 @@ class AdderEnv(Env):
 之后，需要编写多个测试用例来验证加法器的功能，如下所示：
 
 ```python
-@pytest.mark.toffee_async
-async def test_random(toffee_request):
-    env = toffee_request()
-
+@toffee_test.case
+async def test_random(adder_env):
     for _ in range(1000):
         a = random.randint(0, 2**64 - 1)
         b = random.randint(0, 2**64 - 1)
         cin = random.randint(0, 1)
-        await env.add_agent.exec_add(a, b, cin)
+        await adder_env.add_agent.exec_add(a, b, cin)
 
-
-@pytest.mark.toffee_async
-async def test_boundary(toffee_request):
-    env = toffee_request()
-
+@toffee_test.case
+async def test_boundary(adder_env):
     for cin in [0, 1]:
         for a in [0, 2**64 - 1]:
             for b in [0, 2**64 - 1]:
-                await env.add_agent.exec_add(a, b, cin)
+                await adder_env.add_agent.exec_add(a, b, cin)
 ```
 
 toffee 集成了 pytest 框架，用户可直接使用 pytest 的功能来对测试用例进行管理。toffee 会自动完成 dut 的驱动与参考模型的比对工作，并生成验证报告。
@@ -139,7 +132,7 @@ make run
 
 运行结束后报告将自动在`reports`目录下生成。
 
-更加详细的使用方法，请参考 [toffee 文档](https://open-verify.cc/toffee/docs/toffee)。
+更加详细的使用方法，请参考 [toffee 文档](https://open-verify.cc/mlvp/docs/mlvp)。
 
 ## 其他信息
 
