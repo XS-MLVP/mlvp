@@ -61,7 +61,7 @@ class ToffeeFormatter(logging.Formatter):
 # Toffee Global Logging Configuration #
 #######################################
 
-toffee_logger = logging.getLogger("Toffee")
+toffee_logger = logging.getLogger("TOFFEE")
 
 def get_logger() -> logging.Logger:
     """Returns the global logger for Toffee"""

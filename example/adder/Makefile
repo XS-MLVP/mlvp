@@ -4,7 +4,7 @@ PICKER 	= picker
 NAME	= Adder
 
 run:
-	pytest --toffee-report -v .
+	pytest --toffee-report -sv .
 
 dut:
 	$(PICKER) export --autobuild=true adder.v -w Adder.fst --sname Adder --tdir picker_out_adder --lang python -e -c --sim verilator

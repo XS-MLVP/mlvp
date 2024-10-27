@@ -1,4 +1,5 @@
-import pytest
+import toffee
+import toffee_test
 
 """
 Test cases
@@ -6,28 +7,25 @@ Test cases
 import random
 from env import AdderEnv, AdderBundle
 
-@pytest.mark.toffee_async
-async def test_random(start_entry):
-    env = start_entry()
-
+@toffee_test.case
+async def test_random(adder_env):
     for _ in range(1000):
         a = random.randint(0, 2**64-1)
         b = random.randint(0, 2**64-1)
         cin = random.randint(0, 1)
-        await env.add_agent.exec_add(a, b, cin)
+        await adder_env.add_agent.exec_add(a, b, cin)
 
-@pytest.mark.toffee_async
-async def test_boundary(start_entry):
-    env = start_entry()
-
+@toffee_test.case
+async def test_boundary(adder_env):
     for cin in [0, 1]:
         for a in [0, 2**64-1]:
             for b in [0, 2**64-1]:
-                await env.add_agent.exec_add(a, b, cin)
+                await adder_env.add_agent.exec_add(a, b, cin)
 
 """
 Coverage definition
 """
+
 import toffee.funcov as fc
 from toffee.funcov import CovGroup
 
@@ -47,18 +45,13 @@ def adder_cover_point(adder):
 """
 Initialize before each test
 """
-import toffee
-from UT_Adder import DUTAdder
-from toffee_test.plugin import ToffeeRequest
 
-@pytest.fixture()
-def start_entry(toffee_request: ToffeeRequest):
-    toffee.setup_logging(toffee.INFO)
+from UT_Adder import DUTAdder
+
+@toffee_test.fixture
+async def adder_env(toffee_request: toffee_test.ToffeeRequest):
+    toffee.setup_logging(toffee.WARNING)
     dut = toffee_request.create_dut(DUTAdder)
     toffee_request.add_cov_groups(adder_cover_point(dut))
-
-    def start_code():
-        toffee.start_clock(dut)
-        return AdderEnv(AdderBundle.from_prefix("io_").bind(dut))
-
-    return start_code
+    toffee.start_clock(dut)
+    return AdderEnv(AdderBundle.from_prefix("io_").bind(dut))

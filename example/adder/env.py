@@ -7,10 +7,6 @@ class AdderBundle(Bundle):
 	a, b, cin, sum, cout = Signals(5)
 
 class AdderAgent(Agent):
-    def __init__(self, bundle):
-        super().__init__(bundle.step)
-        self.bundle = bundle
-
     @driver_method()
     async def exec_add(self, a, b, cin):
         self.bundle.a.value = a
@@ -27,7 +23,6 @@ class AdderModel(Model):
         sum = result & ((1 << 64) - 1)
         cout = result >> 64
         return sum, cout
-
 
 class AdderEnv(Env):
     def __init__(self, adder_bundle):
