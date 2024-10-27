@@ -1,7 +1,8 @@
-import asyncio
+__all__ = ["Delayer"]
 
+import asyncio
 from .asynchronous import add_callback
-from .base import MObject
+from ._base import MObject
 
 
 async def __process_delayer():

@@ -1,5 +1,7 @@
+__all__ = ["Env"]
+
 from .agent import Agent
-from .base import MObject
+from ._base import MObject
 from .logger import error
 from .logger import warning
 from .model import Model

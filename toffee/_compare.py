@@ -1,3 +1,5 @@
+__all__ = ["compare_once", "Comparator"]
+
 from .asynchronous import Component
 from .logger import *
 

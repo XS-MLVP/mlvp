@@ -1,7 +1,3 @@
-import sys
-
-sys.path.append("../")
-
 import toffee
 from toffee import Bundle
 

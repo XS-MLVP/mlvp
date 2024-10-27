@@ -1,3 +1,14 @@
+__all__ = [
+    "Event",
+    "Queue",
+    "sleep",
+    "create_task",
+    "run",
+    "gather",
+    "start_clock",
+    "main_coro",
+]
+
 import asyncio
 import sys
 
@@ -243,7 +254,7 @@ async def gather(*coros):
 Component definition
 """
 
-from .base import MObject
+from ._base import MObject
 
 
 class Component(MObject):

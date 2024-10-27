@@ -1,10 +1,7 @@
 import os
 import sys
 
-import pytest
-
 import toffee.funcov as fc
-from toffee.reporter import set_func_coverage
 
 
 class TextData(object):
@@ -17,7 +14,7 @@ class TextData(object):
         return self.value
 
 
-def test_funcov(request):
+def test_funcov():
     v = TextData(1)
     g = fc.CovGroup("coverage_group_0")
 
@@ -95,7 +92,6 @@ def test_funcov(request):
     g.sample()
     # print results
     assert g.is_all_covered() == True
-    set_func_coverage(request, g)
     print("test_funcov pass pid: ", os.getpid(), file=sys.stderr)
 
 
