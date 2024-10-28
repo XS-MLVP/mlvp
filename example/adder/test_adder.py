@@ -11,7 +11,7 @@ Test cases
 """
 
 
-@toffee_test.case
+@toffee_test.testcase
 async def test_random(adder_env):
     for _ in range(1000):
         a = random.randint(0, 2**64 - 1)
@@ -20,7 +20,7 @@ async def test_random(adder_env):
         await adder_env.add_agent.exec_add(a, b, cin)
 
 
-@toffee_test.case
+@toffee_test.testcase
 async def test_boundary(adder_env):
     for cin in [0, 1]:
         for a in [0, 2**64 - 1]:
