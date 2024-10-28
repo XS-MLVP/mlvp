@@ -1,33 +1,37 @@
 # Toffee
 
-> mlvp 已更名为 Toffee
+[![PyPI version](https://badge.fury.io/py/pytoffee.svg)](https://badge.fury.io/py/pytoffee)
 
-Toffee 是一款基于 Python 的硬件验证框架，旨在帮助用户更加便捷、规范地使用 Python 构建硬件验证环境。它依托于多语言转换工具 [picker](https://github.com/XS-MLVP/picker)，该工具能够将硬件设计的 Verilog 代码转换为 Python Package，使得用户可以使用 Python 来驱动并验证硬件设计。
+[English Version](README.md) | [中文版本](README_zh.md)
 
-Toffee 吸收了部分 UVM 验证方法学，确保验证环境的规范性与可复用性。此外，toffee 对验证环境的构建方式进行了重新设计，使其更符合软件开发者的使用习惯，从而让软件开发者能够轻松上手硬件验证工作。
+> mlvp has been renamed to Toffee
 
-更多关于 Toffee 的介绍，请参阅 [Toffee 文档](https://open-verify.cc/mlvp/docs/mlvp)。
+Toffee is a Python-based hardware verification framework designed to help users build hardware verification environments more conveniently and systematically using Python. It leverages the multi-language conversion tool [picker](https://github.com/XS-MLVP/picker), which converts Verilog code of hardware designs into Python Packages, enabling users to drive and verify hardware designs in Python.
 
-## 安装
+Toffee incorporates elements of UVM methodology to ensure the verification environment's standardization and reusability. Moreover, Toffee redesigns the verification environment setup to better align with software developers' workflows, making it easier for software developers to engage in hardware verification tasks.
 
-Toffee 需要的依赖有：
+For more information about Toffee, please refer to the [Toffee Documentation](https://open-verify.cc/mlvp/docs/mlvp).
+
+## Installation
+
+Toffee requires the following dependencies:
 
 - Python 3.6.8+
 - Picker 0.9.0+
 
-当安装好上述依赖后，可通过 pip 安装 toffee：
+Once these dependencies are installed, you can install Toffee via pip:
 
 ```bash
 pip install pytoffee
 ```
 
-或通过以下命令安装最新版本的 toffee：
+Or install the latest version of Toffee with the following command:
 
 ```bash
 pip install pytoffee@git+https://github.com/XS-MLVP/toffee@master
 ```
 
-通过以下方式可进行本地安装：
+For a local installation:
 
 ```bash
 git clone https://github.com/XS-MLVP/toffee.git
@@ -35,11 +39,11 @@ cd toffee
 pip install .
 ```
 
-## 使用
+## Usage
 
-我们使用一个简单的加法器示例来演示 Toffee 的使用方法，该示例位于 `example/adder` 目录下。
+We use a simple adder example located in the `example/adder` directory to demonstrate how to use Toffee.
 
-加法器的设计如下：
+The design of the adder is as follows:
 
 ```verilog
 module Adder #(
@@ -57,15 +61,15 @@ assign {io_cout, io_sum}  = io_a + io_b + io_cin;
 endmodule
 ```
 
-使用 Toffee 搭建验证环境之前，需要使用 picker 将设计转换为 Python Package。安装好依赖后，可以直接在 `example/adder` 目录下运行以下命令来完成转换：
+Before building the verification environment using Toffee, you need to use picker to convert the design into a Python Package. After installing the dependencies, run the following command in the `example/adder` directory to complete the conversion:
 
 ```bash
 make dut
 ```
 
-为了验证加法器的功能，需要使用 Toffee 提供的方法来建立验证环境。
+To verify the functionality of the adder, you need to set up the verification environment using Toffee.
 
-首先需要为其创建加法器接口的驱动方法，这里用到了 `Bundle` 来描述需要驱动的某类接口，`Agent` 用于编写对该接口的驱动方法。如下所示：
+First, create a driver method for the adder interface. Here, `Bundle` describes the interface to be driven, while `Agent` is used to write the driving method for this interface. The setup is shown below:
 
 ```python
 class AdderBundle(Bundle):
@@ -82,7 +86,7 @@ class AdderAgent(Agent):
         return self.bundle.sum.value, self.bundle.cout.value
 ```
 
-为了验证加法器的功能，我们定义一个 `Model` 类用于捕获与DUT的交互信息并进行比对。
+To verify the functionality of the adder, define a `Model` class to capture interaction information with the DUT and perform comparisons.
 
 ```python
 class AdderModel(Model):
@@ -94,7 +98,7 @@ class AdderModel(Model):
         return sum, cout
 ```
 
-接下来，需要创建一个顶层的测试环境，并与Model相关联，如下所示：
+Next, create a top-level test environment and associate it with the Model, as shown below:
 
 ```python
 class AdderEnv(Env):
@@ -105,9 +109,9 @@ class AdderEnv(Env):
         self.attach(AdderModel())
 ```
 
-此时，验证环境已经搭建完成，Model 中的方法会被自动调用，并将结果与加法器的输出进行比对。
+At this point, the verification environment is complete. The methods in the Model will be automatically invoked and compared with the output of the adder.
 
-之后，需要编写测试用例来验证加法器的功能，通过 [toffee-test](https://github.com/XS-MLVP/toffee-test/tree/master)，可以使用如下方式编写测试用例。
+Afterward, write test cases to verify the functionality of the adder. With [toffee-test](https://github.com/XS-MLVP/toffee-test/tree/master), test cases can be written as follows:
 
 ```python
 @toffee_test.testcase
@@ -126,16 +130,16 @@ async def test_boundary(adder_env):
                 await adder_env.add_agent.exec_add(a, b, cin)
 ```
 
-可以直接在 `example/adder` 目录下运行以下命令来运行该示例：
+Run the example in the `example/adder` directory with the following command:
 
 ```bash
 make run
 ```
 
-运行结束后报告将自动在`reports`目录下生成。
+A report will be automatically generated in the `reports` directory upon completion.
 
-更加详细的使用方法，请参考 [Toffee 文档](https://open-verify.cc/mlvp/docs/mlvp)。
+For more detailed usage, please refer to the [Toffee Documentation](https://open-verify.cc/mlvp/docs/mlvp).
 
-## 其他信息
+## Additional Information
 
-本项目隶属 **万众一芯(UnityChip)** 开放验证，更多信息请访问 [open-verify.cc](https://open-verify.cc)
+This project is part of **UnityChip's** open verification initiative. For more information, please visit [open-verify.cc](https://open-verify.cc).
