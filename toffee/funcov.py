@@ -188,6 +188,7 @@ class CovGroup(object):
         self.stop_sample = False
         self.sample_count = 0
         self.sample_calln = 0
+        return self
 
     def add_watch_point(
         self,
@@ -232,6 +233,8 @@ class CovGroup(object):
             "hinted": False,
             "once": self.disable_sample_when_point_hinted if once == None else once,
         }
+        self.hinted = False
+        return self
 
     add_cover_point = add_watch_point
 
@@ -243,6 +246,7 @@ class CovGroup(object):
         if name not in self.cov_points:
             raise ValueError("Invalid key %s" % name)
         del self.cov_points[name]
+        return self
 
     def reset_point(self, name: str):
         """
@@ -255,12 +259,15 @@ class CovGroup(object):
             k: 0 for k in self.cov_points[name]["bins"].keys()
         }
         self.cov_points[name]["hinted"] = False
+        self.hinted = False
+        return self
 
     def clear(self):
         """
         clear all points
         """
         self.init()
+        return self
 
     @staticmethod
     def __check__(points) -> bool:
@@ -351,6 +358,7 @@ class CovGroup(object):
             if not onece:
                 self.all_once = False
         self.hinted = all_hinted
+        return self
 
     def sample_stoped(self):
         """
@@ -365,6 +373,7 @@ class CovGroup(object):
         stop sampling
         """
         self.stop_sample = True
+        return self
 
     def resume_sample(self):
         """
@@ -372,6 +381,7 @@ class CovGroup(object):
         """
         self.stop_sample = False
         self.all_once = False
+        return self
 
     def as_dict(self):
         """
