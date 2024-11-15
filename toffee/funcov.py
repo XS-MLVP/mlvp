@@ -24,6 +24,7 @@ __all__ = [
 
 import inspect
 import json
+from typing import Union
 from collections import OrderedDict
 from typing import Callable
 from typing import Union
@@ -39,7 +40,8 @@ class CovCondition(MObject):
         raise NotImplementedError("Method __check__ is not implemented")
 
     def __call__(self, target) -> bool:
-        return self.__check__(target.value)
+        value = getattr(target, "value", target)
+        return self.__check__(value)
 
 
 class CovEq(CovCondition):
@@ -194,7 +196,6 @@ class CovGroup(object):
         self,
         target: object,
         bins: Union[dict, CovCondition, Callable[[object, object], bool]],
-        check_func: dict = {},
         name: str = "",
         once=None,
     ):
@@ -202,10 +203,6 @@ class CovGroup(object):
         Add a watch point to the group
         @param target: the object to be watched, need to have a value attribute. eg target.value is available
         @param bins: a dict of CovCondition objects, a single CovCondition object or a Callable object (its params is call(target) -> bool).
-        @param check_func: a dict of functions to check the condition, the key should be the same as bins, the value shoud be a function. \
-            the function should have the signature of func(target, covcondtion, points) -> bool. Arg target is the original data to check. Arg \
-            covcondtion is the condition data in bins. Arg points is the points in CovGroup object. If the function is not provided, \
-            the default check function will be used.
         @param name: the name of the point
         """
         key = name
@@ -228,10 +225,10 @@ class CovGroup(object):
         self.cov_points[key] = {
             "taget": target,
             "bins": bins,
-            "check_func": check_func,
             "hints": {k: 0 for k in bins.keys()},
             "hinted": False,
             "once": self.disable_sample_when_point_hinted if once == None else once,
+            "functions": {},
         }
         self.hinted = False
         return self
@@ -262,6 +259,39 @@ class CovGroup(object):
         self.hinted = False
         return self
 
+    def mark_function(self, name: str, func: Union[Callable,str, list], bin_name: str = None):
+        """Mark one or more functions for a point
+
+        Description:
+            By this reverse marking, record the relationship between checkpoints and
+            target coverage functions to facilitate the management and analysis
+            of checkpoints and test cases.
+
+        Args:
+            name (str): checkpoint name
+            func (Union[Callable,str, list]): function or function list to be marked
+            bin_name (str, optional): bin name. Defaults to None.
+
+        Returns:
+            CovGroup: this covgroup object
+        """
+        point = self.cover_point(name)
+        if bin_name:
+            assert bin_name in point["bins"], "Invalid bin name %s" % bin_name
+        else:
+            bin_name = "anonymous"
+        if bin_name not in point["functions"]:
+            point["functions"][bin_name] = set()
+        if not isinstance(func, (list, tuple)):
+            func = [func]
+        for f in func:
+            if isinstance(f, str):
+                point["functions"][bin_name].add(f)
+            else:
+                assert isinstance(f, Callable)
+                point["functions"][bin_name].add("%s.%s"%(f.__module__, f.__name__))
+        return self
+
     def clear(self):
         """
         clear all points
@@ -274,30 +304,23 @@ class CovGroup(object):
         hinted = True
         onece = True
         for k, b in points["bins"].items():
-            check_func = points["check_func"].get(k)
             hints = points["hints"][k]
-
-            if check_func:
-                hints += 1 if check_func(points["taget"], b, points) else 0
+            checked = False
+            if callable(b):
+                checked = b(points["taget"])
+            elif isinstance(b, (list, tuple)):
+                checked = True
+                for c in b:
+                    if not c(points["taget"]):
+                        checked = False
+                        break
             else:
-                checked = False
-                if callable(b):
-                    checked = b(points["taget"])
-                elif isinstance(b, (list, tuple)):
-                    checked = True
-                    for c in b:
-                        if not c(points["taget"]):
-                            checked = False
-                            break
-                else:
-                    raise ValueError(
-                        "Invalid value %s for key %s, Need callable bin/bins" % (b, k)
-                    )
-                hints += 1 if checked else 0
-
+                raise ValueError(
+                    "Invalid value %s for key %s, Need callable bin/bins" % (b, k)
+                )
+            hints += 1 if checked else 0
             if hints == 0:
                 hinted = False
-
             if not (hinted and points["once"] == True):
                 onece = False
             points["hints"][k] = hints
@@ -410,6 +433,12 @@ class CovGroup(object):
                 has_once = True
             return v["hinted"]
 
+        def collect_functions(v):
+            ret = {}
+            for k, d in v["functions"].items():
+                ret[k] = list(d)
+            return ret
+
         ret["points"] = [
             {
                 "once": v["once"],
@@ -418,6 +447,7 @@ class CovGroup(object):
                     collect_bins({"name": x, "hints": y}) for x, y in v["hints"].items()
                 ],
                 "name": k,
+                "functions": collect_functions(v),
             }
             for k, v in self.cov_points.items()
         ]
