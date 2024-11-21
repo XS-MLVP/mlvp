@@ -259,7 +259,7 @@ class CovGroup(object):
         self.hinted = False
         return self
 
-    def mark_function(self, name: str, func: Union[Callable,str, list], bin_name: str = None, raise_error=True):
+    def mark_function(self, name: str, func: Union[Callable,str, list], bin_name: Union[str, list] = None, raise_error=True):
         """Mark one or more functions for a point
 
         Description:
@@ -270,7 +270,7 @@ class CovGroup(object):
         Args:
             name (str): checkpoint name
             func (Union[Callable,str, list]): function or function list to be marked
-            bin_name (str, optional): bin name. Defaults to None.
+            bin_name (Union[str, list]): bin name. Defaults to None.
 
         Returns:
             CovGroup: this covgroup object
@@ -281,24 +281,30 @@ class CovGroup(object):
             if raise_error:
                 raise e
             return self
-        if bin_name:
-            if bin_name not in point["bins"]:
-                if raise_error:
-                    raise Exception("Invalid bin name %s" % bin_name)
-                else:
-                    bin_name = bin_name + "(not fond)"
+        bin_names = bin_name
+        if isinstance(bin_name, str) or bin_name is None:
+            bin_names = [bin_name]
         else:
-            bin_name = "anonymous"
-        if bin_name not in point["functions"]:
-            point["functions"][bin_name] = set()
-        if not isinstance(func, (list, tuple)):
-            func = [func]
-        for f in func:
-            if isinstance(f, str):
-                point["functions"][bin_name].add(f)
+            assert isinstance(bin_name, (list, tuple))
+        for b_name in bin_names:
+            if b_name:
+                if b_name not in point["bins"]:
+                    if raise_error:
+                        raise Exception("Invalid bin name %s" % b_name)
+                    else:
+                        b_name = b_name + "(not fond)"
             else:
-                assert isinstance(f, Callable)
-                point["functions"][bin_name].add("%s.%s"%(f.__module__, f.__name__))
+                b_name = "anonymous"
+            if b_name not in point["functions"]:
+                point["functions"][b_name] = set()
+            if not isinstance(func, (list, tuple)):
+                func = [func]
+            for f in func:
+                if isinstance(f, str):
+                    point["functions"][b_name].add(f)
+                else:
+                    assert isinstance(f, Callable)
+                    point["functions"][b_name].add("%s.%s"%(f.__module__, f.__name__))
         return self
 
     def clear(self):
