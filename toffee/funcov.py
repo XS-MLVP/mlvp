@@ -259,7 +259,7 @@ class CovGroup(object):
         self.hinted = False
         return self
 
-    def mark_function(self, name: str, func: Union[Callable,str, list], bin_name: str = None):
+    def mark_function(self, name: str, func: Union[Callable,str, list], bin_name: str = None, raise_error=True):
         """Mark one or more functions for a point
 
         Description:
@@ -275,9 +275,18 @@ class CovGroup(object):
         Returns:
             CovGroup: this covgroup object
         """
-        point = self.cover_point(name)
+        try:
+            point = self.cover_point(name)
+        except Exception as e:
+            if raise_error:
+                raise e
+            return self
         if bin_name:
-            assert bin_name in point["bins"], "Invalid bin name %s" % bin_name
+            if bin_name not in point["bins"]:
+                if raise_error:
+                    raise Exception("Invalid bin name %s" % bin_name)
+                else:
+                    bin_name = bin_name + "(not fond)"
         else:
             bin_name = "anonymous"
         if bin_name not in point["functions"]:
