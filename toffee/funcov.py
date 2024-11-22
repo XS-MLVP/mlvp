@@ -289,10 +289,12 @@ class CovGroup(object):
         for b_name in bin_names:
             if b_name:
                 if b_name not in point["bins"]:
-                    if raise_error:
-                        raise Exception("Invalid bin name %s" % b_name)
-                    else:
-                        b_name = b_name + "(not fond)"
+                    # No wildcard checks are performed here; data statistics handle it themselves.
+                    if "*" not in b_name and "?" not in b_name:
+                        if raise_error:
+                            raise Exception("Invalid bin name %s" % b_name)
+                        else:
+                            b_name = b_name + "(not fond)"
             else:
                 b_name = "anonymous"
             if b_name not in point["functions"]:
