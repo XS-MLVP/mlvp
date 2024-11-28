@@ -54,7 +54,7 @@ def adder_cover_point(adder):
 Initialize before each test
 """
 
-from UT_Adder import DUTAdder
+from picker_out_adder import DUTAdder
 
 
 @toffee_test.fixture
