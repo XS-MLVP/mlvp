@@ -198,6 +198,7 @@ class CovGroup(object):
         bins: Union[dict, CovCondition, Callable[[object, object], bool]],
         name: str = "",
         once=None,
+        dynamic_bin=False
     ):
         """
         Add a watch point to the group
@@ -225,6 +226,7 @@ class CovGroup(object):
         self.cov_points[key] = {
             "taget": target,
             "bins": bins,
+            "dynamic_bin": dynamic_bin,
             "hints": {k: 0 for k in bins.keys()},
             "hinted": False,
             "once": self.disable_sample_when_point_hinted if once == None else once,
@@ -465,6 +467,7 @@ class CovGroup(object):
                 ],
                 "name": k,
                 "functions": collect_functions(v),
+                "dynamic_bin": v["dynamic_bin"],
             }
             for k, v in self.cov_points.items()
         ]
