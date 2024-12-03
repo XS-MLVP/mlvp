@@ -9,8 +9,9 @@ def set_hash(set_in):
         str_res = f"{str_res}_{num}"
     return hash(str_res)
 
-class MPrinter():
+class MProxy():
     stored = ''
+    leaf = None
 
     def print(self, str_in=''):
         self.stored += str_in + '\n'
@@ -18,6 +19,10 @@ class MPrinter():
     def get(self):
         return self.stored
 
+    def get_leave_hash(self, ob):
+        if self.leaf is None:
+            self.leaf = hash(ob)
+        return self.leaf 
 
 # dfs function
 # node: the current node to be visit
@@ -25,7 +30,7 @@ class MPrinter():
 # insides: stores all the nodes' full name of the same kind. For bundles, also stores the index of the unique bundle
 # prefix: prefix str of current node
 # bundle_names_counter: store the bundle name, which might be useful in the future
-def visit(node, logs, insides, prefix, bundle_names_counter, rp:MPrinter):
+def visit(node, logs, insides, prefix, bundle_names_counter, rp:MProxy):
     leaf = True
     sons = set()
     for son_name in node:
@@ -67,7 +72,7 @@ def visit(node, logs, insides, prefix, bundle_names_counter, rp:MPrinter):
                                 son_bundles[grandson_inside] = []
                             son_bundles[grandson_inside].append(name)
                     if len(leaves) > 0:
-                        leaves_str = ','.join(leaves)
+                        leaves_str = ', '.join(leaves)
                         after_str = f"Signals({len(leaves)})" if len(leaves) > 1 else "Signal()"
                         rp.print(f"\t{leaves_str} = {after_str}")
                     for bundle_hash in son_bundles.keys():
@@ -83,7 +88,7 @@ def visit(node, logs, insides, prefix, bundle_names_counter, rp:MPrinter):
 
             insides[inside_hash][1].append(whole_name)
         else:
-            son_hash = 114514 # for all leaves, ways to deal in toffee are same, they are all signals, so assign a useless number
+            son_hash = rp.get_leave_hash(node[son_name]) # for all leaves, ways to deal in toffee are same, they are all signals, so get a staic value equal to
 
         sons.add(son_hash)
 
@@ -96,7 +101,7 @@ def main(signals_path, target_path):
     notes = {}
     insides = {}
     module_name = "PredCheckerAll"
-    rpr = MPrinter()
+    rpr = MProxy()
     rpr.print("from toffee import Bundle, Signals, Signal\n")
     data = {module_name: data}
     sons, _ = visit(data, notes, insides, "", [0, []], rpr)
