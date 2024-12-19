@@ -31,12 +31,11 @@ class MProxy():
 # prefix: prefix str of current node
 # bundle_names_counter: store the bundle name, which might be useful in the future
 def visit(node, logs, insides, prefix, bundle_names_counter, rp:MProxy):
-    leaf = True
+    leaf = False
     sons = set()
     for son_name in node:
         
         if type(node[son_name]) == dict:
-            leaf = False
             whole_name = f"{prefix}{son_name}"
             grandsons, son_leaf = visit(node[son_name], logs, insides, f"{whole_name}_", bundle_names_counter, rp)
             inside_hash = set_hash(grandsons)
@@ -88,6 +87,7 @@ def visit(node, logs, insides, prefix, bundle_names_counter, rp:MProxy):
 
             insides[inside_hash][1].append(whole_name)
         else:
+            leaf=True
             son_hash = rp.get_leave_hash(node[son_name]) # for all leaves, ways to deal in toffee are same, they are all signals, so get a staic value equal to
 
         sons.add(son_hash)
