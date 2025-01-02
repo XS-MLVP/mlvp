@@ -119,9 +119,11 @@ class PdbToffee(pdb.Pdb):
         if signal is None:
             error("signal '%s' not found" % name)
             return
+        signal.SetIgnoreSameDataWrite(False)
         signal.AsVPIWriteForce()
         signal.value = value
         self.dut.RefreshComb()
+        signal.SetIgnoreSameDataWrite(True)
 
     def do_trelease(self, arg):
         if not arg:
@@ -130,10 +132,12 @@ class PdbToffee(pdb.Pdb):
         if signal is None:
             error("signal '%s' not found" % arg)
             return
+        signal.SetIgnoreSameDataWrite(False)
         signal.AsVPIWriteRelease()
         signal.value = signal.value
         self.dut.RefreshComb()
         signal.AsVPIWriteNoDelay()
+        signal.SetIgnoreSameDataWrite(True)
 
 
 def get(dut, *args, **kwargs):

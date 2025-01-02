@@ -6,11 +6,13 @@ module mem (
     input logic [3:0] addr,
     input logic [7:0] data_in,
     input logic write_enable,
-    output logic [7:0] data_out
+    output logic [7:0] data_out,
+    output logic [31:0] out_counter
 );
     reg [7:0] memory [3:0][15:0];
     reg [7:0] data_buffer;
     reg [31:0] wcounter;
+    reg [31:0] ocounter;
     reg [31:0] rcounter;
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -26,4 +28,5 @@ module mem (
         end
     end
     assign data_out = data_buffer;
+    assign out_counter = ocounter;
 endmodule

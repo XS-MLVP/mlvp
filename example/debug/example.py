@@ -12,7 +12,7 @@ def custom_F2(self):
 
 
 def test_mem():
-    dut = DUTmem()
+    dut = DUTmem("+vpi")
     dut.InitClock("clk")
     pdb = get(dut)
     # reset
