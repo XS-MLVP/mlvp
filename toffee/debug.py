@@ -45,9 +45,9 @@ class PdbToffee(pdb.Pdb):
         deep = 99
         if arg:
             args = arg.split()
-            prefix = args[0]
+            deep = args[0]
             if len(args) > 1:
-                deep = args[1]
+                prefix = args[1]
             try:
                 deep = int(deep)
             except Exception as e:
