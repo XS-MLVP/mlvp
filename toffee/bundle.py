@@ -775,8 +775,8 @@ class Bundle(MObject):
                 attr_value = getattr(dut, attr_key)
                 if "XData" not in attr_value.__class__.__name__:
                     continue
-                new_bundle.signals.append(attr_key[len(prefix) :])
-            new_bundle.set_current_level_signal()
+                new_bundle.current_level_signals.append(attr_key[len(prefix) :])
+            # new_bundle.set_current_level_signal()
         new_bundle.__connect_method = PrefixBindMethod(prefix)
         return new_bundle
 
