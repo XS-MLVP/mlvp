@@ -1,7 +1,7 @@
-WORK_DIR = $(shell pwd)/src
-PYTHON 	= python3
+PYTHON	= python3
 PICKER 	= picker
 NAME	= Adder
+
 
 run:
 	pytest --toffee-report -sv .

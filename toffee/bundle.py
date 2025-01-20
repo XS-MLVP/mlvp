@@ -223,6 +223,26 @@ def Signals(num: int):
     return [Signal() for _ in range(num)]
 
 
+class SignalList:
+    def __init__(self, format: str, limit: int, rule=None):
+        assert limit > 0, "limit must be greater than 0"
+        assert "#" in format, "format must contain at least one #"
+
+        self.signals = [Signal() for _ in range(limit)]
+        self.names = []
+        if rule is None:
+            rule = lambda num: str(num)
+        for i in range(limit):
+            self.names.append(format.replace("#", rule(i)))
+
+    def __getitem__(self, key):
+        return self.signals[key]
+
+class BundleList:
+    def __init__(self, prefix, limit, rule=None):
+        ...
+
+
 class Bundle(MObject):
     """
     A bundle is a collection of signals in a DUT.

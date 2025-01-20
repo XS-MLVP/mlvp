@@ -1,7 +1,7 @@
 import asyncio
 
-import pytest
 
+import toffee_test
 import toffee
 from toffee.triggers import *
 
@@ -20,7 +20,7 @@ class DUT:
     def Step(self, cycles): ...
 
 
-@pytest.mark.toffee_async
+@toffee_test.testcase
 async def test_delayer():
     dut = DUT()
     dut.event.clear()
