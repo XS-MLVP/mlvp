@@ -677,16 +677,26 @@ class Bundle(MObject):
                 signal: getattr(self, signal).value
                 for signal in self.current_level_signals
             }
+            signal_lists = {
+                signal_list_name: [
+                    signal.value for signal in signal_list
+                ]
+                for signal_list_name, signal_list in self.__all_signal_lists()
+            }
             sub_bundles = {
                 sub_bundle_name: getattr(self, sub_bundle_name).as_dict(multilevel)
                 for sub_bundle_name, _ in self.__all_sub_bundles()
             }
-            return {**signals, **sub_bundles}
+            return {**signals, **signal_lists, **sub_bundles}
         else:
             signals = {
                 signal: getattr(self, signal).value
                 for signal in self.current_level_signals
             }
+            for signal_list_name, signal_list in self.__all_signal_lists():
+                signals.update({
+                    signal_list_name: [signal.value for signal in signal_list]
+                })
             for sub_bundle_name, sub_bundle in self.__all_sub_bundles():
                 sub_bundle_dict = sub_bundle.as_dict(multilevel)
                 for sub_bundle_signal, value in sub_bundle_dict.items():
@@ -997,6 +1007,12 @@ class Bundle(MObject):
             yield (Bundle.appended_level_string(level_string, signal)), getattr(
                 self, signal, None
             )
+        for signal_list_name, signal_list in self.__all_signal_lists():
+            for idx, signal in enumerate(signal_list.signals):
+                yield (
+                    Bundle.appended_level_string(level_string, f"{signal_list_name}[{idx}]"),
+                    signal,
+                )
         for sub_bundle_name, sub_bundle in self.__all_sub_bundles():
             yield from sub_bundle.all_signals(
                 Bundle.appended_level_string(level_string, sub_bundle_name)
@@ -1125,6 +1141,19 @@ class Bundle(MObject):
 
                 if unconnected_signal_access:
                     setattr(self, signal, self._dummy_signal)
+
+        for signal_list_name, signal_list in self.__all_signal_lists():
+            for idx, signal in enumerate(signal_list.names):
+                if signal not in connected_signals:
+                    rule_string = Bundle.__get_rule_string(rule_stack, signal)
+                    level_string = Bundle.appended_level_string(level_string, f"{signal_list_name}[{idx}]")
+                    warning(
+                        f'The signal that can be connected to "{level_string}" '
+                        f'is not found in dut, it should satisfy rule "{rule_string}"'
+                    )
+
+                    if unconnected_signal_access:
+                        signal_list.signals[idx] = self._dummy_signal
 
     def __remove_signal_attr(self, signal_name):
         """
