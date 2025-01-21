@@ -1,5 +1,5 @@
 import toffee
-from toffee import Bundle
+from toffee import *
 
 
 class FakeXData: ...
@@ -8,7 +8,6 @@ class FakeXData: ...
 class FakePin:
     def __init__(self):
         self.xdata, self.event, self.value, self.mIOType = FakeXData(), None, None, 0
-
 
 class FakeDUT:
     def __init__(self):
@@ -139,5 +138,19 @@ def test_bundle():
     )
 
 
-if __name__ == "__main__":
-    test_bundle()
+# Signal List Test
+
+def test_signal_list():
+    toffee.setup_logging(INFO)
+    class MyDUT(FakeDUT):
+        def __init__(self):
+            self.io_vec_0, self.io_vec_4, self.io_vec_2 = FakePin(), FakePin(), FakePin()
+    class BundleWithSignalList(Bundle):
+        a, b = Signals(2)
+        vec = SignalList("vec_#", 3)
+
+    bundle = BundleWithSignalList.from_prefix("io_").set_name("bundle")
+    bundle.bind(MyDUT())
+
+    print(bundle)
+    print(list(bundle.all_signals()))

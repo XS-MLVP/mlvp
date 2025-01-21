@@ -4,6 +4,7 @@ __all__ = [
     "DummySignal",
     "Signal",
     "Signals",
+    "SignalList",
 ]
 
 import random
@@ -18,6 +19,89 @@ from typing import Union
 from ._base import MObject
 from .logger import *
 
+class DummySignal:
+    """
+    A dummy signal class that does nothing. It will return None when accessed,
+    and do nothing when set.
+    """
+
+    def __setattr__(self, __name, __value):
+        pass
+
+    def __getattribute__(self, __name):
+        return None
+
+
+class WriteMode(Enum):
+    """
+    The write mode of a bundle.
+    """
+
+    Imme = 0
+    Rise = 1
+    Fall = 2
+
+class UnconnectedSignal:
+    def __getattribute__(self, name: str):
+        raise AttributeError(f"Can't access unconnected signal")
+
+    def __setattr__(self, name: str, value):
+        raise AttributeError(f"Can't access unconnected signal")
+
+    def __str__(self):
+        return "UnconnectedSignal()"
+
+
+class Signal(UnconnectedSignal): ...
+
+
+def Signals(num: int):
+    if num == 1:
+        return Signal()
+    return [Signal() for _ in range(num)]
+
+
+class SignalList:
+    def __init__(self, format: str, limit: int, rule=None):
+        assert limit > 0, "limit must be greater than 0"
+        assert "#" in format, "format must contain at least one #"
+
+        self.format = format
+        self.signals = [Signal() for _ in range(limit)]
+        self.names = []
+        if rule is None:
+            rule = lambda num: str(num)
+        for i in range(limit):
+            self.names.append(format.replace("#", rule(i)))
+
+    def bind_signal(self, bundle, signal_name: str, signal, info_bundle_name, info_dut_name):
+        assert signal_name in self.names, f"signal name {signal_name} not in signal list"
+
+        index = self.names.index(signal_name)
+        self.signals[index] = signal
+        bundle.update_signal_info(signal)
+        info(f'dut\'s signal "{info_dut_name}" is connected to "{info_bundle_name}[{index}]"')
+
+    def __getitem__(self, key):
+        return self.signals[key]
+
+    def __str__(self):
+        signal_str = ", ".join(
+            f"{idx}: {signal}" for idx, signal in enumerate(self.signals)
+        )
+        return f"SignalList({signal_str})"
+
+    @classmethod
+    def from_signallist(cls, old_signal_list: "SignalList"):
+        signal_list = cls("#", 1)
+        signal_list.format = old_signal_list.format
+        signal_list.signals = old_signal_list.signals[:]
+        signal_list.names = old_signal_list.names[:]
+        return signal_list
+
+class BundleList:
+    def __init__(self, prefix, limit, rule=None):
+        ...
 
 class BindMethod(MObject):
     """
@@ -49,6 +133,23 @@ class BindMethod(MObject):
 
         raise NotImplementedError
 
+    @staticmethod
+    def get_matching_signal_list(bundle, signal_name: str) -> SignalList:
+        """
+        Get the matching signal list in the bundle.
+
+        Args:
+            bundle: The bundle to get the matching signal list from.
+            signal_name: The name of the signal to get.
+
+        Returns:
+            (signal list name, signal list) if the signal is found in the bundle, None otherwise.
+        """
+
+        for signal_list_name, signal_list in bundle._Bundle__all_signal_lists():
+            if signal_name in signal_list.names:
+                return (signal_list_name, signal_list)
+        return None
 
 class PrefixBindMethod(BindMethod):
     """
@@ -77,6 +178,20 @@ class PrefixBindMethod(BindMethod):
                             info_dut_name=signal["org_name"],
                             info_bundle_name=Bundle.appended_level_string(
                                 level_string, name_no_prefix
+                            ),
+                        )
+                        connected_signals.append(name_no_prefix)
+                elif signal_list_name_and_inst := self.get_matching_signal_list(
+                    bundle, name_no_prefix
+                ):
+                    if not detection_mode:
+                        signal_list_name_and_inst[1].bind_signal(
+                            bundle,
+                            name_no_prefix,
+                            signal["signal"],
+                            info_dut_name=signal["org_name"],
+                            info_bundle_name=Bundle.appended_level_string(
+                                level_string, signal_list_name_and_inst[0]
                             ),
                         )
                         connected_signals.append(name_no_prefix)
@@ -125,6 +240,20 @@ class RegexBindMethod(BindMethod):
                             ),
                         )
                     connected_signals.append(name)
+                elif signal_list_name_and_inst := self.get_matching_signal_list(
+                    bundle, name
+                ):
+                    if not detection_mode:
+                        signal_list_name_and_inst[1].bind_signal(
+                            bundle,
+                            name,
+                            signal["signal"],
+                            info_dut_name=signal["org_name"],
+                            info_bundle_name=Bundle.appended_level_string(
+                                level_string, signal_list_name_and_inst[0]
+                            ),
+                        )
+                    connected_signals.append(name)
                 else:
                     matching_signals.append(
                         {
@@ -169,6 +298,20 @@ class DictBindMethod(BindMethod):
                             ),
                         )
                     connected_signals.append(name)
+                elif signal_list_name_and_inst := self.get_matching_signal_list(
+                    bundle, name
+                ):
+                    if not detection_mode:
+                        signal_list_name_and_inst[1].bind_signal(
+                            bundle,
+                            name,
+                            signal["signal"],
+                            info_dut_name=signal["org_name"],
+                            info_bundle_name=Bundle.appended_level_string(
+                                level_string, signal_list_name_and_inst[0]
+                            ),
+                        )
+                    connected_signals.append(name)
                 else:
                     matching_signals.append(
                         {
@@ -181,67 +324,6 @@ class DictBindMethod(BindMethod):
                 remain_signals.append(signal)
 
         return (connected_signals, matching_signals, remain_signals)
-
-
-class DummySignal:
-    """
-    A dummy signal class that does nothing. It will return None when accessed,
-    and do nothing when set.
-    """
-
-    def __setattr__(self, __name, __value):
-        pass
-
-    def __getattribute__(self, __name):
-        return None
-
-
-class WriteMode(Enum):
-    """
-    The write mode of a bundle.
-    """
-
-    Imme = 0
-    Rise = 1
-    Fall = 2
-
-
-class UnconnectedSignal:
-    def __getattribute__(self, name: str):
-        raise AttributeError(f"Can't access unconnected signal")
-
-    def __setattr__(self, name: str, value):
-        raise AttributeError(f"Can't access unconnected signal")
-
-
-class Signal(UnconnectedSignal): ...
-
-
-def Signals(num: int):
-    if num == 1:
-        return Signal()
-    return [Signal() for _ in range(num)]
-
-
-class SignalList:
-    def __init__(self, format: str, limit: int, rule=None):
-        assert limit > 0, "limit must be greater than 0"
-        assert "#" in format, "format must contain at least one #"
-
-        self.signals = [Signal() for _ in range(limit)]
-        self.names = []
-        if rule is None:
-            rule = lambda num: str(num)
-        for i in range(limit):
-            self.names.append(format.replace("#", rule(i)))
-
-    def __getitem__(self, key):
-        return self.signals[key]
-
-class BundleList:
-    def __init__(self, prefix, limit, rule=None):
-        ...
-
 
 class Bundle(MObject):
     """
@@ -270,15 +352,19 @@ class Bundle(MObject):
 
         self.set_current_level_signal()
 
-        # Recreate the sub-bundles
+        # Recreate subbundles and signal lists for each instance
         for sub_bundle_name, sub_bundle in self.__all_sub_bundles():
-            original_sub_bundle = getattr(self, sub_bundle_name)
             new_sub_bundle = sub_bundle.__class__()
             new_sub_bundle.current_level_signals = (
-                original_sub_bundle.current_level_signals
+                sub_bundle.current_level_signals
             )
-            new_sub_bundle.__connect_method = original_sub_bundle.__connect_method
+            new_sub_bundle.__connect_method = sub_bundle.__connect_method
             setattr(self, sub_bundle_name, new_sub_bundle)
+
+        # Recreate signal lists for each instance
+        for signal_list_name, signal_list in self.__all_signal_lists():
+            new_signal_list = SignalList.from_signallist(signal_list)
+            setattr(self, signal_list_name, new_signal_list)
 
     def ___dut_call_on_rise__(self, cycle):
         """
@@ -941,6 +1027,14 @@ class Bundle(MObject):
         """
 
         setattr(self, signal_name, signal)
+        self.update_signal_info(signal)
+        info(f'dut\'s signal "{info_dut_name}" is connected to "{info_bundle_name}"')
+
+    def update_signal_info(self, signal):
+        """
+        Update the signal info when a signal is connected to the bundle.
+        """
+
         if self.__clock_event is None:
             self.__clock_event = signal.event
 
@@ -949,24 +1043,35 @@ class Bundle(MObject):
         else:
             signal.xdata.number_of_bundles_connected_to = 1
 
-        info(f'dut\'s signal "{info_dut_name}" is connected to "{info_bundle_name}"')
-
     def __str__(self):
+        item_str = ""
+
         signals = ", ".join(
             [
                 f"{signal}: {getattr(self, signal)}"
                 for signal in self.current_level_signals
             ]
         )
-        sub_bundles = ", ".join(
+        signal_lists = ", ".join(
             [
-                f"{sub_bundle_name}: {getattr(self, sub_bundle_name)}"
-                for sub_bundle_name, _ in self.__all_sub_bundles()
+                f"{signal_list_name}: {signal_list}"
+                for signal_list_name, signal_list in self.__all_signal_lists()
             ]
         )
+        sub_bundles = ", ".join(
+            [
+                f"{sub_bundle_name}: {sub_bundle}"
+                for sub_bundle_name, sub_bundle in self.__all_sub_bundles()
+            ]
+        )
+
+        item_str = signals
+        if signal_lists != "":
+            item_str = item_str + ", " + signal_lists
         if sub_bundles != "":
-            signals = signals + ", " + sub_bundles
-        return f"{type(self).__name__}({signals})"
+            item_str = item_str + ", " + sub_bundles
+
+        return f"{type(self).__name__}({item_str})"
 
     def __all_sub_bundles(self):
         """
@@ -979,6 +1084,19 @@ class Bundle(MObject):
 
         for attr in dir(self):
             if isinstance(getattr(self, attr), Bundle):
+                yield (attr, getattr(self, attr))
+
+    def __all_signal_lists(self):
+        """
+        Yield all signal lists of the bundle.
+
+        Returns:
+            A generator of tuples (attr_name, signal_list) where attr is the name of the
+            signal list and signal_list is the signal list itself.
+        """
+
+        for attr in dir(self):
+            if isinstance(getattr(self, attr), SignalList):
                 yield (attr, getattr(self, attr))
 
     def __detect_missing_signals(
