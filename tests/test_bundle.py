@@ -152,3 +152,10 @@ class TestSignalList:
 
         bundle = BundleWithSignalList.from_prefix("io_").set_name("bundle")
         bundle.bind(MyDUT())
+
+        bundle.as_dict(multilevel=True)
+        bundle.as_dict(multilevel=False)
+
+        bundle.assign({"a": 1, "b": 2, "vec": [3, 4, 5]}, multilevel=True)
+        bundle.assign({"a": 1, "b": 2, "vec": [3, 4, 5]}, multilevel=False)
+

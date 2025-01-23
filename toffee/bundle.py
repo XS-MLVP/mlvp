@@ -82,6 +82,11 @@ class SignalList:
         bundle.update_signal_info(signal)
         info(f'dut\'s signal "{info_dut_name}" is connected to "{info_bundle_name}[{index}]"')
 
+    def assign(self, value):
+        assert len(value) == len(self.signals), "value length must match signal list length"
+        for i, signal in enumerate(self.signals):
+            signal.value = value[i]
+
     def __getitem__(self, key):
         return self.signals[key]
 
@@ -783,6 +788,10 @@ class Bundle(MObject):
                 if signal in self.current_level_signals:
                     getattr(self, signal).value = value
                 elif any(
+                    signal_list[0] == signal for signal_list in self.__all_signal_lists()
+                ):
+                    getattr(self, signal).assign(value)
+                elif any(
                     subbundle[0] == signal for subbundle in self.__all_sub_bundles()
                 ):
                     getattr(self, signal).assign(
@@ -799,6 +808,10 @@ class Bundle(MObject):
             for signal, value in item.items():
                 if signal in self.current_level_signals:
                     getattr(self, signal).value = value
+                elif any(
+                    signal_list[0] == signal for signal_list in self.__all_signal_lists()
+                ):
+                    getattr(self, signal).assign(value)
                 else:
                     sub_bundle_name = None
                     if "." in signal:
