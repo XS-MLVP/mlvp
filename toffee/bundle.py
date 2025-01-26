@@ -1342,6 +1342,14 @@ class Bundle(MObject):
                     rule_string = Bundle.__get_rule_string(rule_stack, signal)
                     all_signals_rule[full_signal_name] = rule_string
 
+                for signal_list_name, signal_list in self.__all_signal_lists():
+                    for idx, signal in enumerate(signal_list.names):
+                        full_signal_name = Bundle.appended_level_string(
+                            level_string, f"{signal_list_name}[{idx}]"
+                        )
+                        rule_string = Bundle.__get_rule_string(rule_stack, signal)
+                        all_signals_rule[full_signal_name] = rule_string
+
         # Bind the remain signals to the sub-bundles
         for sub_bundle_name, sub_bundle in self.__all_sub_bundles():
             matching_signals = sub_bundle.__bind_from_signal_list(
