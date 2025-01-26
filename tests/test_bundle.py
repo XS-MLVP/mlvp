@@ -140,22 +140,39 @@ def test_bundle():
 
 # Signal List Test
 
-class TestSignalList:
-    def test_signal_list(self):
-        toffee.setup_logging(INFO)
-        class MyDUT(FakeDUT):
-            def __init__(self):
-                self.io_vec_0, self.io_vec_4, self.io_vec_2 = FakePin(), FakePin(), FakePin()
-        class BundleWithSignalList(Bundle):
-            a, b = Signals(2)
-            vec = SignalList("vec_#", 3)
+def test_signal_list():
+    toffee.setup_logging(INFO)
+    class MyDUT(FakeDUT):
+        def __init__(self):
+            self.io_a, self.io_b = FakePin(), FakePin()
+            self.io_vec_0, self.io_vec_1, self.io_vec_2 = FakePin(), FakePin(), FakePin()
+    class BundleWithSignalList(Bundle):
+        a, b = Signals(2)
+        vec = SignalList("vec_#", 3)
 
-        bundle = BundleWithSignalList.from_prefix("io_").set_name("bundle")
-        bundle.bind(MyDUT())
+    bundle = BundleWithSignalList.from_prefix("io_").set_name("bundle")
+    bundle.bind(MyDUT())
 
-        bundle.as_dict(multilevel=True)
-        bundle.as_dict(multilevel=False)
+    bundle.as_dict(multilevel=True)
+    bundle.as_dict(multilevel=False)
 
-        bundle.assign({"a": 1, "b": 2, "vec": [3, 4, 5]}, multilevel=True)
-        bundle.assign({"a": 1, "b": 2, "vec": [3, 4, 5]}, multilevel=False)
+    bundle.assign({"a": 1, "b": 2, "vec": [3, 4, 5]}, multilevel=True)
+    bundle.assign({"a": 1, "b": 2, "vec": [3, 4, 5]}, multilevel=False)
+
+def test_bundle_list():
+    toffee.setup_logging(INFO)
+    class MyDUT(FakeDUT):
+        def __init__(self):
+            self.io_a, self.io_b = FakePin(), FakePin()
+            self.io_vec_0_a, self.io_vec_0_b, self.io_vec_1_a, self.io_vec_1_b = FakePin(), FakePin(), FakePin() ,FakePin()
+    class SubBundle(Bundle):
+        a, b = Signals(2)
+    class BundleWithBundleList(Bundle):
+        c, d = Signals(2)
+        vec = BundleList(SubBundle, "vec_#_", 2)
+
+    bundle = BundleWithBundleList.from_prefix("io_").set_name("bundle")
+    bundle.bind(MyDUT())
+
+
 

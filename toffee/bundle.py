@@ -5,6 +5,7 @@ __all__ = [
     "Signal",
     "Signals",
     "SignalList",
+    "BundleList",
 ]
 
 import random
@@ -105,8 +106,38 @@ class SignalList:
         return signal_list
 
 class BundleList:
-    def __init__(self, prefix, limit, rule=None):
-        ...
+    def __init__(self, bundle, format: str, limit: int, rule=None):
+        assert limit > 0, "limit must be greater than 0"
+        assert "#" in format, "format must contain at least one #"
+
+        self.format = format
+        self.names = []
+        self.bundles = []
+
+        if rule is None:
+            rule = lambda num: str(num)
+        for i in range(limit):
+            name = format.replace("#", rule(i))
+            self.names.append(name)
+            self.bundles.append(bundle.from_prefix(name))
+
+    def __getitem__(self, key):
+        return self.bundles[key]
+
+    def __str__(self):
+        bundle_str = ", ".join(
+            f"{idx}: {bundle}" for idx, bundle in enumerate(self.bundles)
+        )
+        return f"BundleList({bundle_str})"
+
+    @classmethod
+    def from_bundlelist(cls, old_bundle_list: "BundleList"):
+        bundle_list = cls(old_bundle_list.bundles[0], "#", 1)
+        bundle_list.format = old_bundle_list.format
+        bundle_list.names = old_bundle_list.names[:]
+        bundle_list.bundles = old_bundle_list.bundles[:]
+        return bundle_list
+
 
 class BindMethod(MObject):
     """
@@ -370,6 +401,11 @@ class Bundle(MObject):
         for signal_list_name, signal_list in self.__all_signal_lists():
             new_signal_list = SignalList.from_signallist(signal_list)
             setattr(self, signal_list_name, new_signal_list)
+
+        # Recreate bundle lists for each instance
+        for bundle_list_name, bundle_list in self.__all_bundle_lists():
+            new_bundle_list = BundleList.from_bundlelist(bundle_list)
+            setattr(self, bundle_list_name, new_bundle_list)
 
     def ___dut_call_on_rise__(self, cycle):
         """
@@ -1128,6 +1164,19 @@ class Bundle(MObject):
             if isinstance(getattr(self, attr), SignalList):
                 yield (attr, getattr(self, attr))
 
+    def __all_bundle_lists(self):
+        """
+        Yield all bundle lists of the bundle.
+
+        Returns:
+            A generator of tuples (attr_name, bundle_list) where attr is the name of the
+            bundle list and bundle_list is the bundle list itself.
+        """
+
+        for attr in dir(self):
+            if isinstance(getattr(self, attr), BundleList):
+                yield (attr, getattr(self, attr))
+
     def __detect_missing_signals(
         self, connected_signals, level_string, rule_stack, unconnected_signal_access
     ):
@@ -1269,6 +1318,18 @@ class Bundle(MObject):
             )
             if sub_bundle.__clock_event is not None:
                 self.__clock_event = sub_bundle.__clock_event
+
+        for bundle_list_name, bundle_list in self.__all_bundle_lists():
+            for idx, bundle in enumerate(bundle_list.bundles):
+                matching_signals = bundle.__bind_from_signal_list(
+                    matching_signals,
+                    Bundle.appended_level_string(level_string, f"{bundle_list_name}[{idx}]"),
+                    rule_stack,
+                    unconnected_signal_access,
+                    detection_mode,
+                    specific_signal,
+                    all_signals_rule,
+                )
 
         Bundle.__revert_signal_name(matching_signals, all_signals)
         return matching_signals + remain_signals
