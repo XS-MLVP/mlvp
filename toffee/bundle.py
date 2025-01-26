@@ -121,6 +121,10 @@ class BundleList:
             self.names.append(name)
             self.bundles.append(bundle.from_prefix(name))
 
+    def assign(self, value, multilevel=True):
+        for i, bundle in enumerate(self.bundles):
+            bundle.assign(value[i], multilevel)
+
     def __getitem__(self, key):
         return self.bundles[key]
 
@@ -728,7 +732,14 @@ class Bundle(MObject):
                 sub_bundle_name: getattr(self, sub_bundle_name).as_dict(multilevel)
                 for sub_bundle_name, _ in self.__all_sub_bundles()
             }
-            return {**signals, **signal_lists, **sub_bundles}
+            sub_bundle_lists = {
+                sub_bundle_list_name: [
+                    sub_bundle.as_dict(multilevel)
+                    for sub_bundle in sub_bundle_list
+                ]
+                for sub_bundle_list_name, sub_bundle_list in self.__all_bundle_lists()
+            }
+            return {**signals, **signal_lists, **sub_bundles, **sub_bundle_lists}
         else:
             signals = {
                 signal: getattr(self, signal).value
@@ -742,6 +753,11 @@ class Bundle(MObject):
                 sub_bundle_dict = sub_bundle.as_dict(multilevel)
                 for sub_bundle_signal, value in sub_bundle_dict.items():
                     signals[f"{sub_bundle_name}.{sub_bundle_signal}"] = value
+            for bundle_list_name, bundle_list in self.__all_bundle_lists():
+                for i, bundle in enumerate(bundle_list):
+                    bundle_dict = bundle.as_dict(multilevel)
+                    for bundle_signal, value in bundle_dict.items():
+                        signals[f"{bundle_list_name}[{i}].{bundle_signal}"] = value
             return signals
 
     def set_all(self, value):
@@ -835,6 +851,10 @@ class Bundle(MObject):
                         multilevel,
                         Bundle.appended_level_string(level_string, signal),
                     )
+                elif any(
+                    bundle_list[0] == signal for bundle_list in self.__all_bundle_lists()
+                ):
+                    getattr(self, signal).assign(value, multilevel)
                 else:
                     full_signal_name = Bundle.appended_level_string(
                         level_string, signal
@@ -861,6 +881,10 @@ class Bundle(MObject):
                             multilevel,
                             Bundle.appended_level_string(level_string, sub_bundle_name),
                         )
+                    elif any(
+                        bundle_list[0] == signal for bundle_list in self.__all_bundle_lists()
+                    ):
+                        getattr(self, signal).assign(value, multilevel)
                     else:
                         full_signal_name = Bundle.appended_level_string(
                             level_string, signal
@@ -1049,7 +1073,7 @@ class Bundle(MObject):
         Yield all signals of the bundle.
 
         Returns:
-            A generator of signal names.
+            A generator of signal names and signals.
         """
 
         for signal in self.current_level_signals:
@@ -1066,6 +1090,11 @@ class Bundle(MObject):
             yield from sub_bundle.all_signals(
                 Bundle.appended_level_string(level_string, sub_bundle_name)
             )
+        for bundle_list_name, bundle_list in self.__all_bundle_lists():
+            for idx, bundle in enumerate(bundle_list.bundles):
+                yield from bundle.all_signals(
+                    Bundle.appended_level_string(level_string, f"{bundle_list_name}[{idx}]")
+                )
 
     def __getitem__(self, key):
         """
@@ -1129,12 +1158,20 @@ class Bundle(MObject):
                 for sub_bundle_name, sub_bundle in self.__all_sub_bundles()
             ]
         )
+        bundle_lists = ", ".join(
+            [
+                f"{bundle_list_name}: {bundle_list}"
+                for bundle_list_name, bundle_list in self.__all_bundle_lists()
+            ]
+        )
 
         item_str = signals
         if signal_lists != "":
             item_str = item_str + ", " + signal_lists
         if sub_bundles != "":
             item_str = item_str + ", " + sub_bundles
+        if bundle_lists != "":
+            item_str = item_str + ", " + bundle_lists
 
         return f"{type(self).__name__}({item_str})"
 

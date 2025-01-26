@@ -174,5 +174,11 @@ def test_bundle_list():
     bundle = BundleWithBundleList.from_prefix("io_").set_name("bundle")
     bundle.bind(MyDUT())
 
+    print(bundle)
+    print(list(bundle.all_signals()))
+    print(bundle.as_dict(multilevel=True))
+    print(bundle.as_dict(multilevel=False))
 
+    bundle.assign({"c": 1, "d": 2, "vec": [{"a": 3, "b": 4}, {"a": 5, "b": 6}]}, multilevel=True)
+    bundle.assign({"c": 1, "d": 2, "vec": [{"a": 3, "b": 4}, {"a": 5, "b": 6}]}, multilevel=False)
 
